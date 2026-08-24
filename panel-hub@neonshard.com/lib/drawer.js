@@ -16,6 +16,7 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 const DRAWER_GAP = 6;
 const SCREEN_EDGE_MARGIN = 8;
 const PANEL_ROLE = 'panel-hub-drawer';
+const RESTORE_ROLE = 'panel-hub-restore';
 
 /*
  * How much narrower than the budget the widgets must get before an already
@@ -119,6 +120,41 @@ export class Drawer {
             this._settings.get_int('panel-index'),
             this._settings.get_string('panel-box'));
         this._setToggleVisible(false);
+
+        /*
+         * Once folded, manual mode exposes two separate panel actions: this
+         * button puts the widgets back inline, while _toggle opens the drawer.
+         * Registering this second at the same index places it immediately
+         * before _toggle, giving the panel the compact "<  up" pair.
+         */
+        this._restoreToggle = new PanelMenu.Button(
+            0.0, _('Show these in the panel'), true);
+        this._restoreToggle.add_child(new St.Icon({
+            icon_name: 'pan-start-symbolic',
+            style_class: 'system-status-icon',
+        }));
+        this._restoreToggle.set_accessible_name(_('Show these in the panel'));
+
+        if (Clutter.ClickGesture) {
+            const click = new Clutter.ClickGesture();
+            click.set_recognize_on_press(true);
+            click.connect('recognize', () => this._restoreFromPanel());
+            this._restoreToggle.add_action(click);
+        } else {
+            this._restoreToggle.connect('button-press-event', () => {
+                this._restoreFromPanel();
+                return Clutter.EVENT_STOP;
+            });
+        }
+
+        const staleRestore = Main.panel.statusArea[RESTORE_ROLE];
+        if (staleRestore && staleRestore !== this._restoreToggle)
+            staleRestore.destroy();
+
+        Main.panel.addToStatusArea(RESTORE_ROLE, this._restoreToggle,
+            this._settings.get_int('panel-index'),
+            this._settings.get_string('panel-box'));
+        this._setRestoreVisible(false);
     }
 
     _buildDrawer() {
@@ -128,38 +164,9 @@ export class Drawer {
             y_align: Clutter.ActorAlign.CENTER,
         });
 
-        /*
-         * The way back out of the drawer lives inside it, so unfolding is
-         * discoverable: open the drawer and the control is right there. It is
-         * a sibling of _drawerBox rather than a child, so _collapse() adding
-         * indicators cannot displace it.
-         */
-        this._expandButton = new St.Button({
-            style_class: 'panel-hub-expand-button',
-            child: new St.Icon({
-                icon_name: 'pan-start-symbolic',
-                icon_size: 16,
-            }),
-            y_align: Clutter.ActorAlign.CENTER,
-            can_focus: true,
-        });
-        this._expandButton.set_accessible_name(_('Show these in the panel'));
-        this._expandButton.connect('clicked', () => {
-            this.close();
-            this._setManualCollapsed(false);
-            this.sync();
-        });
-
-        const content = new St.BoxLayout({
-            orientation: Clutter.Orientation.HORIZONTAL,
-            y_align: Clutter.ActorAlign.CENTER,
-        });
-        content.add_child(this._drawerBox);
-        content.add_child(this._expandButton);
-
         this._drawer = new St.Bin({
             style_class: 'panel-hub-drawer popup-menu-content',
-            child: content,
+            child: this._drawerBox,
             reactive: true,
         });
 
@@ -199,6 +206,19 @@ export class Drawer {
         this._toggle.container.visible = visible;
     }
 
+    _setRestoreVisible(visible) {
+        if (!this._restoreToggle)
+            return;
+        this._restoreToggle.visible = visible;
+        this._restoreToggle.container.visible = visible;
+    }
+
+    _restoreFromPanel() {
+        this.close();
+        this._setManualCollapsed(false);
+        this.sync();
+    }
+
     /*
      * Manual mode needs the button permanently, since it is the only way to
      * fold the widgets away. The automatic modes only need it once something
@@ -218,11 +238,9 @@ export class Drawer {
         this._setToggleVisible(this._toggleShouldBeVisible());
 
         /*
-         * Two jobs, two arrows. Inline, the button folds the widgets sideways
-         * into the drawer. Once folded it no longer unfolds anything -- it
-         * pops the drawer open -- so it points the way the drawer will appear
-         * rather than back at the panel, and the arrow that really does unfold
-         * lives inside the drawer.
+         * Inline, the button folds the widgets sideways into the drawer. Once
+         * folded it points the way the drawer will appear, while a separate
+         * adjacent panel button points back toward the restored widgets.
          */
         this._toggleIcon.icon_name = this._collapsed
             ? (this._panelAtBottom() ? 'pan-up-symbolic' : 'pan-down-symbolic')
@@ -231,12 +249,9 @@ export class Drawer {
             ? _('Show folded Panel Hub widgets')
             : _('Fold Panel Hub widgets away'));
 
-        // Unfolding from inside the drawer only makes sense when the user is
-        // the one deciding; in the automatic modes it would be undone at once.
-        if (this._expandButton) {
-            this._expandButton.visible =
-                this._settings.get_string('drawer-mode') === 'manual';
-        }
+        // Manual restoration would immediately be undone in automatic modes.
+        this._setRestoreVisible(this._collapsed &&
+            this._settings.get_string('drawer-mode') === 'manual');
     }
 
     /* ------------------------------------------------------------- geometry */
@@ -639,6 +654,10 @@ export class Drawer {
         if (this._toggle) {
             this._toggle.destroy();
             this._toggle = null;
+        }
+        if (this._restoreToggle) {
+            this._restoreToggle.destroy();
+            this._restoreToggle = null;
         }
     }
 }

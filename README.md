@@ -67,8 +67,9 @@ everything else is memory-backed and sampled synchronously.
 ### Folding
 
 Default mode is `manual`: a `›` button in the panel folds the widgets into the
-drawer, and a `‹` button inside the drawer brings them back. No threshold, no
-measurement, no guessing — portable by construction.
+drawer. Once folded, the panel shows `‹` to put them back inline and an arrow
+toward the drawer to open it. No threshold, no measurement, no guessing —
+portable by construction.
 
 The fold state is remembered per monitor, keyed by `WIDTHxHEIGHT` of the screen
 holding the panel, so docking and undocking restores the choice already made on
