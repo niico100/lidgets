@@ -43,6 +43,21 @@
     min-height: 32px;
 }
 
+/*
+ * The unfold control at the end of the drawer. Kept quiet so it reads as a
+ * secondary action next to the live widgets rather than competing with them.
+ */
+.panel-hub-expand-button {
+    border-radius: 6px;
+    margin-left: 4px;
+    padding: 4px 6px;
+}
+
+.panel-hub-expand-button:hover,
+.panel-hub-expand-button:focus {
+    background-color: rgba(127, 127, 127, 0.25);
+}
+
 /* Deliberately loud -- this warns that the machine is reachable remotely. */
 .panel-hub-remote-banner {
     background-color: #c01c28;

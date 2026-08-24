@@ -52,7 +52,8 @@ export class Drawer {
         this._monitorsChangedId = Main.layoutManager.connect(
             'monitors-changed', () => this.sync());
         this._settingsIds =
-            ['drawer-mode', 'drawer-max-width', 'drawer-space-fraction'].map(
+            ['drawer-mode', 'drawer-max-width', 'drawer-space-fraction',
+                'drawer-collapsed-per-monitor'].map(
                 key => settings.connect(`changed::${key}`, () => this.sync()));
 
         this.sync();
@@ -69,7 +70,9 @@ export class Drawer {
         });
         this._recheckId = GLib.timeout_add_seconds(
             GLib.PRIORITY_LOW, RECHECK_SECONDS, () => {
-                this.sync();
+                // Only the fit-measuring mode can change its mind on its own.
+                if (this._settings.get_string('drawer-mode') === 'auto')
+                    this.sync();
                 return GLib.SOURCE_CONTINUE;
             });
     }
@@ -78,10 +81,11 @@ export class Drawer {
 
     _buildToggle() {
         this._toggle = new PanelMenu.Button(0.0, 'Panel Hub', true);
-        this._toggle.add_child(new St.Icon({
-            icon_name: 'view-list-symbolic',
+        this._toggleIcon = new St.Icon({
+            icon_name: 'pan-end-symbolic',
             style_class: 'system-status-icon',
-        }));
+        });
+        this._toggle.add_child(this._toggleIcon);
 
         /*
          * Shell 50 drives panel buttons with a ClickGesture, and passing
@@ -123,9 +127,38 @@ export class Drawer {
             y_align: Clutter.ActorAlign.CENTER,
         });
 
+        /*
+         * The way back out of the drawer lives inside it, so unfolding is
+         * discoverable: open the drawer and the control is right there. It is
+         * a sibling of _drawerBox rather than a child, so _collapse() adding
+         * indicators cannot displace it.
+         */
+        this._expandButton = new St.Button({
+            style_class: 'panel-hub-expand-button',
+            child: new St.Icon({
+                icon_name: 'pan-start-symbolic',
+                icon_size: 16,
+            }),
+            y_align: Clutter.ActorAlign.CENTER,
+            can_focus: true,
+        });
+        this._expandButton.set_accessible_name('Show these in the panel');
+        this._expandButton.connect('clicked', () => {
+            this.close();
+            this._setManualCollapsed(false);
+            this.sync();
+        });
+
+        const content = new St.BoxLayout({
+            orientation: Clutter.Orientation.HORIZONTAL,
+            y_align: Clutter.ActorAlign.CENTER,
+        });
+        content.add_child(this._drawerBox);
+        content.add_child(this._expandButton);
+
         this._drawer = new St.Bin({
             style_class: 'panel-hub-drawer popup-menu-content',
-            child: this._drawerBox,
+            child: content,
             reactive: true,
         });
 
@@ -163,6 +196,41 @@ export class Drawer {
             return;
         this._toggle.visible = visible;
         this._toggle.container.visible = visible;
+    }
+
+    /*
+     * Manual mode needs the button permanently, since it is the only way to
+     * fold the widgets away. The automatic modes only need it once something
+     * has actually been folded. Either way it is pointless with nothing to
+     * collapse.
+     */
+    _toggleShouldBeVisible() {
+        const mode = this._settings.get_string('drawer-mode');
+        if (mode === 'never')
+            return false;
+        if (this._getIndicators().length === 0)
+            return false;
+        return mode === 'manual' ? true : this._collapsed;
+    }
+
+    _updateToggle() {
+        this._setToggleVisible(this._toggleShouldBeVisible());
+
+        // Point the way the widgets will go: right to fold them away into the
+        // drawer, left to bring them back out.
+        this._toggleIcon.icon_name = this._collapsed
+            ? 'pan-start-symbolic'
+            : 'pan-end-symbolic';
+        this._toggle.set_accessible_name(this._collapsed
+            ? 'Panel Hub widgets, folded'
+            : 'Fold Panel Hub widgets away');
+
+        // Unfolding from inside the drawer only makes sense when the user is
+        // the one deciding; in the automatic modes it would be undone at once.
+        if (this._expandButton) {
+            this._expandButton.visible =
+                this._settings.get_string('drawer-mode') === 'manual';
+        }
     }
 
     /* ------------------------------------------------------------- geometry */
@@ -224,12 +292,38 @@ export class Drawer {
      * changes. Measuring our own actors against a share of the panel needs no
      * knowledge of the monitor, of Dash to Panel, or of other extensions.
      */
+    /*
+     * Manual fold state is stored per monitor size, so docking and undocking
+     * restores the choice already made on that screen. Keying on the size
+     * rather than the connector keeps it stable across cable and port changes.
+     */
+    _monitorKey() {
+        const monitor = this._panelMonitor();
+        return monitor ? `${monitor.width}x${monitor.height}` : 'unknown';
+    }
+
+    _manualCollapsed() {
+        const remembered = this._settings
+            .get_value('drawer-collapsed-per-monitor').deepUnpack();
+        return remembered[this._monitorKey()] ?? false;
+    }
+
+    _setManualCollapsed(collapsed) {
+        const remembered = this._settings
+            .get_value('drawer-collapsed-per-monitor').deepUnpack();
+        remembered[this._monitorKey()] = collapsed;
+        this._settings.set_value('drawer-collapsed-per-monitor',
+            new GLib.Variant('a{sb}', remembered));
+    }
+
     _shouldCollapse() {
         const mode = this._settings.get_string('drawer-mode');
         if (mode === 'never')
             return false;
         if (mode === 'always')
             return true;
+        if (mode === 'manual')
+            return this._manualCollapsed();
 
         const monitor = this._panelMonitor();
         if (!monitor)
@@ -302,7 +396,7 @@ export class Drawer {
         else
             this._restore();
 
-        this._setToggleVisible(this._collapsed);
+        this._updateToggle();
 
         if (!this._collapsed)
             this.close();
@@ -372,7 +466,20 @@ export class Drawer {
 
     /* --------------------------------------------------------- open / close */
 
+    /*
+     * In manual mode the button is the whole mechanism: while the widgets are
+     * inline it folds them away, and once folded it opens the drawer to reach
+     * them. In the automatic modes the button only ever appears when already
+     * collapsed, so it is purely an open/close control.
+     */
     _toggleDrawer() {
+        if (this._settings.get_string('drawer-mode') === 'manual' &&
+            !this._collapsed) {
+            this._setManualCollapsed(true);
+            this.sync();
+            return;
+        }
+
         if (this._open)
             this.close();
         else

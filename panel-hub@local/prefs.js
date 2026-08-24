@@ -164,20 +164,28 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         }));
 
         const drawer = new Adw.PreferencesGroup({
-            title: 'When space is tight',
-            description: 'The widgets can fold into a single drawer button. ' +
-                'They keep running while collapsed.',
+            title: 'Folding',
+            description: 'The widgets can fold into a single drawer button to ' +
+                'save room in the panel. They keep running while folded.',
         });
         page.add(drawer);
 
         const modeRow = makeChoiceRow(settings, 'drawer-mode',
-            'Collapse into a drawer', null, [
-                {label: 'When the widgets would not fit', value: 'auto'},
+            'Fold the widgets away', null, [
+                {label: 'When I click the button', value: 'manual'},
+                {label: 'When they would not fit', value: 'auto'},
                 {label: 'When the screen is narrower than a set width', value: 'width'},
                 {label: 'Always', value: 'always'},
                 {label: 'Never', value: 'never'},
             ]);
         drawer.add(modeRow);
+
+        const manualHint = new Adw.ActionRow({
+            title: 'Remembered per monitor',
+            subtitle: 'Fold once on each screen and the choice is restored when ' +
+                'you dock or undock. Use ‹ inside the drawer to unfold.',
+        });
+        drawer.add(manualHint);
 
         const fractionAdjustment = new Gtk.Adjustment({
             lower: 10, upper: 80, step_increment: 5, page_increment: 10,
@@ -202,9 +210,10 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         });
         drawer.add(widthRow);
 
-        // Only one of the two thresholds applies at a time; grey out the other.
+        // At most one of these applies at a time; grey out the rest.
         const syncThresholdRows = () => {
             const mode = settings.get_string('drawer-mode');
+            manualHint.sensitive = mode === 'manual';
             fractionRow.sensitive = mode === 'auto';
             widthRow.sensitive = mode === 'width';
         };

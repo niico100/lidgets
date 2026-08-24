@@ -22,9 +22,16 @@
 
     <!-- Drawer -->
     <key name="drawer-mode" type="s">
-      <default>'auto'</default>
+      <default>'manual'</default>
       <summary>Drawer mode</summary>
-      <description>auto: collapse when the widgets would take more than drawer-space-fraction of the panel. width: collapse when the monitor is narrower than drawer-max-width. always: always collapse. never: always inline.</description>
+      <description>manual: a button in the panel folds and unfolds the widgets, remembered per monitor. auto: collapse when the widgets would take more than drawer-space-fraction of the panel. width: collapse when the monitor is narrower than drawer-max-width. always: always collapse. never: always inline.</description>
+    </key>
+    <key name="drawer-collapsed-per-monitor" type="a{sb}">
+      <default>{}</default>
+      <summary>Remembered fold state, keyed by monitor size</summary>
+      <description>Used only in manual mode. Keyed by "WIDTHxHEIGHT" of the
+      monitor holding the panel, so docking and undocking restores the choice
+      that was made on each screen rather than needing another click.</description>
     </key>
     <key name="drawer-space-fraction" type="i">
       <default>35</default>

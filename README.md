@@ -60,23 +60,38 @@ installed on machines with no NVIDIA card, since it ships with CUDA tooling.
 Free space is queried asynchronously because it can touch a real filesystem;
 everything else is memory-backed and sampled synchronously.
 
-### Drawer collapse
+### Folding
 
-The default `auto` mode asks *"do my widgets fit?"* rather than *"is the screen
-small?"*: it measures the natural width of its own indicators against a share
-of the panel (`drawer-space-fraction`, default 35%). That needs no knowledge of
-the monitor, of Dash to Panel, or of other extensions, and adapts to both the
-screen and how many widgets are switched on.
+Default mode is `manual`: a `›` button in the panel folds the widgets into the
+drawer, and a `‹` button inside the drawer brings them back. No threshold, no
+measurement, no guessing — portable by construction.
 
-Two details keep it stable:
+The fold state is remembered per monitor, keyed by `WIDTHxHEIGHT` of the screen
+holding the panel, so docking and undocking restores the choice already made on
+each screen instead of needing another click. Keying on size rather than
+connector keeps it stable across cable and port changes.
+
+The automatic modes remain available:
+
+| Mode | Behaviour |
+|---|---|
+| `manual` (default) | button only, remembered per monitor |
+| `auto` | folds when the widgets exceed `drawer-space-fraction` (35%) of the panel |
+| `width` | folds when the monitor is narrower than `drawer-max-width` |
+| `always` / `never` | forced |
+
+`auto` measures the natural width of its own indicators, so it needs no
+knowledge of the monitor, of Dash to Panel, or of other extensions. Two details
+keep it stable, and both are load-bearing:
 
 - `.panel-hub-drawer-item` sets height only. If it changed width, the measured
-  figure would depend on whether the widgets were already collapsed, and the
+  figure would depend on whether the widgets were already folded, and the
   decision would oscillate.
-- Expanding again requires clearing the budget by `EXPAND_HYSTERESIS`, so a
-  metric gaining a digit cannot make the panel flap.
+- Unfolding requires clearing the budget by `EXPAND_HYSTERESIS`, so a metric
+  gaining a digit cannot make the panel flap.
 
-`width` mode is the older fixed-pixel behaviour, kept as an explicit option.
+Only `auto` runs the periodic re-measure; the other modes cannot change their
+own mind, so they do no work on a timer.
 
 ### Dash to Panel
 
