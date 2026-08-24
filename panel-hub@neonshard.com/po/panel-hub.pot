@@ -339,11 +339,11 @@ msgstr ""
 msgid "Show these in the panel"
 msgstr ""
 
-#: lib/drawer.js:226
-msgid "Panel Hub widgets, folded"
+#: lib/drawer.js:231
+msgid "Show folded Panel Hub widgets"
 msgstr ""
 
-#: lib/drawer.js:227
+#: lib/drawer.js:232
 msgid "Fold Panel Hub widgets away"
 msgstr ""
 

@@ -217,13 +217,18 @@ export class Drawer {
     _updateToggle() {
         this._setToggleVisible(this._toggleShouldBeVisible());
 
-        // Point the way the widgets will go: right to fold them away into the
-        // drawer, left to bring them back out.
+        /*
+         * Two jobs, two arrows. Inline, the button folds the widgets sideways
+         * into the drawer. Once folded it no longer unfolds anything -- it
+         * pops the drawer open -- so it points the way the drawer will appear
+         * rather than back at the panel, and the arrow that really does unfold
+         * lives inside the drawer.
+         */
         this._toggleIcon.icon_name = this._collapsed
-            ? 'pan-start-symbolic'
+            ? (this._panelAtBottom() ? 'pan-up-symbolic' : 'pan-down-symbolic')
             : 'pan-end-symbolic';
         this._toggle.set_accessible_name(this._collapsed
-            ? _('Panel Hub widgets, folded')
+            ? _('Show folded Panel Hub widgets')
             : _('Fold Panel Hub widgets away'));
 
         // Unfolding from inside the drawer only makes sense when the user is
@@ -266,6 +271,27 @@ export class Drawer {
             ? Main.layoutManager.findMonitorForActor(Main.panel)
             : null;
         return monitor ?? Main.layoutManager.primaryMonitor;
+    }
+
+    /*
+     * Which way the drawer opens, which is also which way the toggle points
+     * once the widgets are folded.
+     *
+     * Ask Dash to Panel which edge it occupies. Inferring the edge from
+     * transformed actor coordinates can report the original GNOME top-panel
+     * location even while the visible Dash to Panel panel is at the bottom.
+     */
+    _panelAtBottom() {
+        const dashPanel = this._dashToPanelForActor(this._toggle);
+        if (dashPanel?.geom?.position !== undefined)
+            return dashPanel.geom.position === St.Side.BOTTOM;
+
+        const monitor = this._panelMonitor();
+        if (!monitor)
+            return false;
+
+        const [, toggleY] = this._toggle.get_transformed_position();
+        return toggleY > monitor.y + monitor.height / 2;
     }
 
     /*
@@ -532,17 +558,7 @@ export class Drawer {
             monitor.x + SCREEN_EDGE_MARGIN,
             Math.min(x, monitor.x + monitor.width - natWidth - SCREEN_EDGE_MARGIN));
 
-        /*
-         * Ask Dash to Panel which edge it occupies. Inferring the edge from
-         * transformed actor coordinates can report the original GNOME top-panel
-         * location even while the visible Dash to Panel panel is at the bottom.
-         */
-        const dashPanel = this._dashToPanelForActor(this._toggle);
-        const panelAtBottom = dashPanel?.geom?.position !== undefined
-            ? dashPanel.geom.position === St.Side.BOTTOM
-            : toggleY > monitor.y + monitor.height / 2;
-
-        const y = panelAtBottom
+        const y = this._panelAtBottom()
             ? Math.round(toggleY - natHeight - DRAWER_GAP)
             : Math.round(toggleY + toggleHeight + DRAWER_GAP);
 
