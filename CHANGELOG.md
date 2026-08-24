@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Allow clock separators to be hidden while retaining spacing between clocks.
+- Make timezone search city-first, so queries such as `Prague` and `New York`
+  find their canonical IANA zones.
+
 ## 1.0.0 — 2026-08-24
 
 Initial public release.

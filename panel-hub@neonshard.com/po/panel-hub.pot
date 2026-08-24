@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Lidgets 1\n"
 "Report-Msgid-Bugs-To: https://github.com/niico100/lidgets/issues\n"
-"POT-Creation-Date: 2026-08-24 14:57+0100\n"
+"POT-Creation-Date: 2026-08-24 17:57+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,317 +17,325 @@ msgstr ""
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
-#: prefs.js:92
+#: prefs.js:109
 msgid "Time zone"
 msgstr ""
 
-#: prefs.js:131
+#: prefs.js:148
 msgid "General"
 msgstr ""
 
-#: prefs.js:136 lib/drawer.js:85
+#: prefs.js:153 lib/drawer.js:85
 msgid "Lidgets"
 msgstr ""
 
-#: prefs.js:137
+#: prefs.js:154
 msgid "Turn the whole set of widgets on or off, and choose where they sit."
 msgstr ""
 
-#: prefs.js:142
+#: prefs.js:159
 msgid "Show Lidgets"
 msgstr ""
 
-#: prefs.js:143
+#: prefs.js:160
 msgid "Master switch for every widget below"
 msgstr ""
 
-#: prefs.js:149
+#: prefs.js:166
 msgid "Widgets"
 msgstr ""
 
-#: prefs.js:150
+#: prefs.js:167
 msgid "Each widget is a separate item in the panel."
 msgstr ""
 
-#: prefs.js:155
+#: prefs.js:172
 msgid "World clocks"
 msgstr ""
 
-#: prefs.js:155
+#: prefs.js:172
 msgid "Times for the zones you follow"
 msgstr ""
 
-#: prefs.js:156 prefs.js:408 lib/weather.js:52
+#: prefs.js:173 prefs.js:435 lib/weather.js:52
 msgid "Weather"
 msgstr ""
 
-#: prefs.js:156
+#: prefs.js:173
 msgid "Current conditions and an 8-hour forecast"
 msgstr ""
 
-#: prefs.js:157
+#: prefs.js:174
 msgid "System metrics"
 msgstr ""
 
-#: prefs.js:157
+#: prefs.js:174
 msgid "CPU, GPU, memory, disk and more"
 msgstr ""
 
-#: prefs.js:158
+#: prefs.js:175
 msgid "Remote desktop banner"
 msgstr ""
 
-#: prefs.js:159
+#: prefs.js:176
 msgid "A red warning while RDP or VNC is accepting connections"
 msgstr ""
 
-#: prefs.js:169
+#: prefs.js:186
 msgid "Placement"
 msgstr ""
 
-#: prefs.js:172
+#: prefs.js:189
 msgid "Panel area"
 msgstr ""
 
-#: prefs.js:173
+#: prefs.js:190
 msgid "Right"
 msgstr ""
 
-#: prefs.js:174
+#: prefs.js:191
 msgid "Centre"
 msgstr ""
 
-#: prefs.js:175
+#: prefs.js:192
 msgid "Left"
 msgstr ""
 
-#: prefs.js:183
+#: prefs.js:200
 msgid "Position"
 msgstr ""
 
-#: prefs.js:184
+#: prefs.js:201
 msgid "Lower numbers sit further to the left within that area"
 msgstr ""
 
-#: prefs.js:189
+#: prefs.js:206
 msgid "Folding"
 msgstr ""
 
-#: prefs.js:190
+#: prefs.js:207
 msgid ""
 "The widgets can fold into a single drawer button to save room in the panel. "
 "They keep running while folded."
 msgstr ""
 
-#: prefs.js:195
+#: prefs.js:212
 msgid "Fold the widgets away"
 msgstr ""
 
-#: prefs.js:196
+#: prefs.js:213
 msgid "When I click the button"
 msgstr ""
 
-#: prefs.js:197
+#: prefs.js:214
 msgid "When they would not fit"
 msgstr ""
 
-#: prefs.js:198
+#: prefs.js:215
 msgid "When the screen is narrower than a set width"
 msgstr ""
 
-#: prefs.js:199
+#: prefs.js:216
 msgid "Always"
 msgstr ""
 
-#: prefs.js:200
+#: prefs.js:217
 msgid "Never"
 msgstr ""
 
-#: prefs.js:205
+#: prefs.js:222
 msgid "Remembered per monitor"
 msgstr ""
 
-#: prefs.js:206
+#: prefs.js:223
 msgid ""
 "Fold once on each screen and the choice is restored when you dock or undock. "
 "Use ‹ inside the drawer to unfold."
 msgstr ""
 
-#: prefs.js:215
+#: prefs.js:232
 msgid "Fold once the widgets exceed"
 msgstr ""
 
-#: prefs.js:216
+#: prefs.js:233
 msgid ""
 "Percent of the panel width. Measured against the widgets themselves, so it "
 "follows both the screen and how many are on."
 msgstr ""
 
-#: prefs.js:226
+#: prefs.js:243
 msgid "Collapse below this width"
 msgstr ""
 
-#: prefs.js:227
+#: prefs.js:244
 msgid "Logical pixels on the monitor holding the panel"
 msgstr ""
 
-#: prefs.js:249 prefs.js:274 prefs.js:299
+#: prefs.js:266 prefs.js:301 prefs.js:326
 msgid "Clocks"
 msgstr ""
 
-#: prefs.js:253 prefs.js:412 prefs.js:573
+#: prefs.js:270 prefs.js:439 prefs.js:600
 msgid "Display"
 msgstr ""
 
-#: prefs.js:256
+#: prefs.js:273
 msgid "Show world clocks"
 msgstr ""
 
-#: prefs.js:261
+#: prefs.js:278
 msgid "24-hour clock"
 msgstr ""
 
-#: prefs.js:262
+#: prefs.js:279
 msgid "Off shows am/pm"
 msgstr ""
 
-#: prefs.js:267
-msgid "Separator between clocks"
+#: prefs.js:285
+msgid "Show separator between clocks"
 msgstr ""
 
-#: prefs.js:275
+#: prefs.js:286
+msgid "Off keeps spacing without punctuation"
+msgstr ""
+
+#: prefs.js:292
+msgid "Separator"
+msgstr ""
+
+#: prefs.js:302
 msgid ""
 "The label is free text, so a flag emoji, a city name, or nothing at all all "
 "work."
 msgstr ""
 
-#: prefs.js:297
+#: prefs.js:324
 msgid "Add a clock"
 msgstr ""
 
-#: prefs.js:298
+#: prefs.js:325
 msgid "Ten clocks is the maximum"
 msgstr ""
 
-#: prefs.js:321
+#: prefs.js:348
 msgid "No clocks"
 msgstr ""
 
-#: prefs.js:322
+#: prefs.js:349
 msgid "Use + to add one"
 msgstr ""
 
-#: prefs.js:335
+#: prefs.js:362
 msgid "Move earlier"
 msgstr ""
 
-#: prefs.js:344
+#: prefs.js:371
 msgid "Move later"
 msgstr ""
 
-#: prefs.js:353
+#: prefs.js:380
 msgid "Remove this clock"
 msgstr ""
 
-#: prefs.js:364
+#: prefs.js:391
 msgid "Label"
 msgstr ""
 
-#: prefs.js:415
+#: prefs.js:442
 msgid "Show weather"
 msgstr ""
 
-#: prefs.js:419
+#: prefs.js:446
 msgid "Units"
 msgstr ""
 
-#: prefs.js:420
+#: prefs.js:447
 msgid "Celsius"
 msgstr ""
 
-#: prefs.js:421
+#: prefs.js:448
 msgid "Fahrenheit"
 msgstr ""
 
-#: prefs.js:429
+#: prefs.js:456
 msgid "Refresh every"
 msgstr ""
 
-#: prefs.js:430
+#: prefs.js:457
 msgid "Minutes between forecast updates"
 msgstr ""
 
-#: prefs.js:437
+#: prefs.js:464
 msgid "Location"
 msgstr ""
 
-#: prefs.js:438
+#: prefs.js:465
 msgid ""
 "Type a town or city, then pick it from the list. Your location is never "
 "looked up from your IP address."
 msgstr ""
 
-#: prefs.js:442
+#: prefs.js:469
 msgid "Using"
 msgstr ""
 
-#: prefs.js:445
+#: prefs.js:472
 msgid "Search for a place"
 msgstr ""
 
-#: prefs.js:458
+#: prefs.js:485
 msgid "Not set yet — it will be guessed from your time zone"
 msgstr ""
 
-#: prefs.js:479
+#: prefs.js:506
 msgid "Could not reach the place lookup service"
 msgstr ""
 
-#: prefs.js:483
+#: prefs.js:510
 msgid "No matching places"
 msgstr ""
 
-#: prefs.js:569
+#: prefs.js:596
 msgid "Metrics"
 msgstr ""
 
-#: prefs.js:576
+#: prefs.js:603
 msgid "Show system metrics"
 msgstr ""
 
-#: prefs.js:581
+#: prefs.js:608
 msgid "Reading prefixes"
 msgstr ""
 
-#: prefs.js:582
+#: prefs.js:609
 msgid "Choose icons or text labels"
 msgstr ""
 
-#: prefs.js:583
+#: prefs.js:610
 msgid "Icons"
 msgstr ""
 
-#: prefs.js:583
+#: prefs.js:610
 msgid "Text"
 msgstr ""
 
-#: prefs.js:597
+#: prefs.js:624
 msgid "Sample every"
 msgstr ""
 
-#: prefs.js:598
+#: prefs.js:625
 msgid "Seconds between readings"
 msgstr ""
 
-#: prefs.js:606
+#: prefs.js:633
 msgid "Show in the panel"
 msgstr ""
 
-#: prefs.js:667 lib/sensors.js:98
+#: prefs.js:697 lib/sensors.js:98
 msgid "Free space"
 msgstr ""
 
-#: prefs.js:674
+#: prefs.js:704
 msgid "Report free space on"
 msgstr ""
 
@@ -335,7 +343,7 @@ msgstr ""
 msgid "World Clocks"
 msgstr ""
 
-#: lib/clocks.js:97
+#: lib/clocks.js:101
 msgid "No clocks configured"
 msgstr ""
 
@@ -351,11 +359,11 @@ msgstr ""
 msgid "Fold Lidgets widgets away"
 msgstr ""
 
-#: lib/metrics.js:23
+#: lib/metrics.js:24
 msgid "System Metrics"
 msgstr ""
 
-#: lib/metrics.js:83
+#: lib/metrics.js:138
 msgid "No sensors detected"
 msgstr ""
 

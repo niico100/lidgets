@@ -48,14 +48,31 @@ const FALLBACK_TIMEZONES = [
 ];
 
 function allTimezones() {
+    let zones;
     try {
-        const zones = Intl.supportedValuesOf('timeZone');
-        if (Array.isArray(zones) && zones.length > 0)
-            return zones;
+        zones = Intl.supportedValuesOf('timeZone');
     } catch {
         // Older SpiderMonkey without supportedValuesOf.
     }
-    return FALLBACK_TIMEZONES;
+    if (!Array.isArray(zones) || zones.length === 0)
+        zones = FALLBACK_TIMEZONES;
+
+    return [...zones].sort((left, right) =>
+        timezoneSearchLabel(left).localeCompare(timezoneSearchLabel(right)));
+}
+
+/*
+ * Adw.ComboRow searches from the beginning of its display string. Put the
+ * locality first so ordinary queries such as "Prague" and "New York" find
+ * Europe/Prague and America/New_York, while retaining the canonical zone for
+ * disambiguation and storage.
+ */
+function timezoneSearchLabel(zone) {
+    const parts = zone.split('/');
+    const locality = parts.at(-1).replaceAll('_', ' ');
+    return parts.length === 1
+        ? locality
+        : `${locality} — ${zone.replaceAll('_', ' ')}`;
 }
 
 /*
@@ -90,7 +107,7 @@ function makeChoiceRow(settings, key, title, subtitle, choices) {
 function makeTimezoneRow(timezones, selectedZone, onChanged) {
     const row = new Adw.ComboRow({
         title: _('Time zone'),
-        model: Gtk.StringList.new(timezones),
+        model: Gtk.StringList.new(timezones.map(timezoneSearchLabel)),
         enable_search: true,
     });
     // enable-search needs an expression to know what text to match against.
@@ -264,8 +281,18 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         settings.bind('clock-24h', format, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(format);
 
-        const separator = new Adw.EntryRow({title: _('Separator between clocks')});
+        const showSeparator = new Adw.SwitchRow({
+            title: _('Show separator between clocks'),
+            subtitle: _('Off keeps spacing without punctuation'),
+        });
+        settings.bind('clock-show-separator', showSeparator, 'active',
+            Gio.SettingsBindFlags.DEFAULT);
+        options.add(showSeparator);
+
+        const separator = new Adw.EntryRow({title: _('Separator')});
         settings.bind('clock-separator', separator, 'text', Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('clock-show-separator', separator, 'sensitive',
+            Gio.SettingsBindFlags.GET);
         options.add(separator);
 
         const timezones = allTimezones();
