@@ -18,6 +18,10 @@ One extension replacing what used to be five separate ones, plus Vitals:
 Everything is now configurable from the preferences window instead of by
 editing source: `gnome-extensions prefs panel-hub@neonshard.com`.
 
+After editing anything under `panel-hub@neonshard.com/`, see
+[RELOADING.md](RELOADING.md) — disabling and re-enabling the extension does not
+pick up code changes on Wayland.
+
 ### Layout
 
 ```
