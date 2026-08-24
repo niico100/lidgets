@@ -1,0 +1,18 @@
+Lidgets includes symbolic icons from the GNOME theme shipped by Vitals:
+
+    https://github.com/corecoding/Vitals
+
+Vitals is Copyright (C) Core Coding and contributors and is distributed under
+the GNU General Public License, version 2. Its own icon credits identify work
+from the Adwaita Icon Theme, GNOME Icon Development Kit, Freon, and daudix.
+
+The copied files are:
+
+    icons/battery-symbolic.svg
+    icons/cpu-symbolic.svg
+    icons/fan-symbolic.svg
+    icons/gpu-symbolic.svg
+    icons/memory-symbolic.svg
+    icons/network-symbolic.svg
+    icons/storage-symbolic.svg
+    icons/temperature-symbolic.svg

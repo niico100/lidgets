@@ -109,6 +109,8 @@ export class Sensors {
         this._gpuTemp = this._findGpuTemp();
         this._fan = this._findFan();
         this._battery = this._findBattery();
+        this._cancellable = new Gio.Cancellable();
+        this._destroyed = false;
 
         this._prevCpu = null;
         this._prevNet = null;
@@ -118,6 +120,7 @@ export class Sensors {
         this._nvidiaCache = null;
         this._nvidiaPending = false;
         this._nvidiaAt = 0;
+        this._nvidiaProc = null;
     }
 
     /* ------------------------------------------------------------ discovery */
@@ -403,16 +406,21 @@ export class Sensors {
         const file = Gio.File.new_for_path(this._diskMount);
         file.query_filesystem_info_async(
             'filesystem::free,filesystem::size',
-            GLib.PRIORITY_LOW, null, (source, result) => {
-                this._diskPending = false;
+            GLib.PRIORITY_LOW, this._cancellable, (source, result) => {
                 try {
                     const info = source.query_filesystem_info_finish(result);
+                    if (this._destroyed)
+                        return;
                     this._diskCache = {
                         free: info.get_attribute_uint64('filesystem::free'),
                         size: info.get_attribute_uint64('filesystem::size'),
                     };
                 } catch {
-                    this._diskCache = null;
+                    if (!this._destroyed)
+                        this._diskCache = null;
+                } finally {
+                    if (!this._destroyed)
+                        this._diskPending = false;
                 }
             });
     }
@@ -437,18 +445,29 @@ export class Sensors {
                 '--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu',
                 '--format=csv,noheader,nounits',
             ], Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
+            this._nvidiaProc = proc;
 
-            proc.communicate_utf8_async(null, null, (source, result) => {
+            proc.communicate_utf8_async(null, this._cancellable, (source, result) => {
+                let stdout = null;
+                try {
+                    [, stdout] = source.communicate_utf8_finish(result);
+                } catch {
+                    // Cancellation and command failure both leave no reading.
+                }
+
+                this._nvidiaProc = null;
+                if (this._destroyed)
+                    return;
+
                 this._nvidiaPending = false;
                 this._nvidiaAt = GLib.get_monotonic_time();
-                try {
-                    const [, stdout] = source.communicate_utf8_finish(result);
+                if (stdout !== null) {
                     const [util, used, total, temp] = stdout.trim().split('\n')[0]
                         .split(',').map(field => Number(field.trim()));
                     this._nvidiaCache = Number.isFinite(util)
                         ? {util, used: used * 1024 * 1024, total: total * 1024 * 1024, temp}
                         : null;
-                } catch {
+                } else {
                     this._nvidiaCache = null;
                 }
             });
@@ -569,6 +588,17 @@ export class Sensors {
         }
 
         return out;
+    }
+
+    destroy() {
+        this._destroyed = true;
+        this._cancellable.cancel();
+        try {
+            this._nvidiaProc?.force_exit();
+        } catch {
+            // It may have exited between cancellation and this call.
+        }
+        this._nvidiaProc = null;
     }
 }
 

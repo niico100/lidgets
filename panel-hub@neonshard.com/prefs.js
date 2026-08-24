@@ -579,8 +579,8 @@ export default class PanelHubPreferences extends ExtensionPreferences {
 
         const prefixStyle = new Adw.ComboRow({
             title: _('Reading prefixes'),
-            subtitle: _('Choose symbols or text labels'),
-            model: Gtk.StringList.new([_('Symbols'), _('Text')]),
+            subtitle: _('Choose icons or text labels'),
+            model: Gtk.StringList.new([_('Icons'), _('Text')]),
         });
         prefixStyle.selected = settings.get_boolean('metrics-show-labels') ? 0 : 1;
         prefixStyle.connect('notify::selected', () =>
@@ -662,7 +662,10 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             }
             return GLib.SOURCE_CONTINUE;
         });
-        page.connect('destroy', () => GLib.source_remove(previewId));
+        page.connect('destroy', () => {
+            GLib.source_remove(previewId);
+            sensors.destroy();
+        });
 
         const diskGroup = new Adw.PreferencesGroup({title: _('Free space')});
         page.add(diskGroup);

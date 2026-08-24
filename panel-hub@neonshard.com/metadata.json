@@ -7,6 +7,5 @@
   ],
   "settings-schema": "org.gnome.shell.extensions.panel-hub",
   "gettext-domain": "panel-hub",
-  "url": "https://github.com/neonshard/panel-hub",
-  "version": 1
+  "url": "https://github.com/niico100/lidgets"
 }

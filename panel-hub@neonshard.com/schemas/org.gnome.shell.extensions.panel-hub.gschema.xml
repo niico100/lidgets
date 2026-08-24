@@ -118,7 +118,7 @@
     </key>
     <key name="metrics-show-labels" type="b">
       <default>true</default>
-      <summary>Use symbol rather than text prefixes for metrics</summary>
+      <summary>Use icons rather than text prefixes for metrics</summary>
     </key>
     <key name="metrics-disk-mount" type="s">
       <default>'/'</default>

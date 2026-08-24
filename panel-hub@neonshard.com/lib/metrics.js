@@ -195,6 +195,7 @@ class MetricsIndicator extends PanelMenu.Button {
         for (const id of this._settingsIds ?? [])
             this._settings.disconnect(id);
         this._settingsIds = [];
+        this._sensors.destroy();
         this._detailLabels.clear();
         this._panelLabels.clear();
     }

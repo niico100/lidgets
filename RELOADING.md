@@ -45,10 +45,11 @@ returns the cached module, `?v=<timestamp>` re-reads the file. `lib/drawer.js`
 imports nothing relative (only `gi://` and `resource:///`), so it can be
 imported standalone and the drawer rebuilt in place.
 
-`Alt+F2` → `lg` → **Evaluator** tab → paste as one line:
+`Alt+F2` → `lg` → **Evaluator** tab → paste as one line, replacing
+`/absolute/path/to/lidgets` with the checkout path:
 
 ```js
-const E = Main.extensionManager.lookup('panel-hub@neonshard.com').stateObj; const M = await import('file:///home/niico/.local/share/gnome-shell/extensions/panel-hub@neonshard.com/lib/drawer.js?v=' + Date.now()); E._drawer.destroy(); E._drawer = new M.Drawer(E._settings, () => E._indicators); 'drawer reloaded'
+const E = Main.extensionManager.lookup('panel-hub@neonshard.com').stateObj; const M = await import('file:///absolute/path/to/lidgets/panel-hub@neonshard.com/lib/drawer.js?v=' + Date.now()); E._drawer.destroy(); E._drawer = new M.Drawer(E._settings, () => E._indicators); 'drawer reloaded'
 ```
 
 Looking Glass evaluates through `AsyncFunction`, so top-level `await` is fine.

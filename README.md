@@ -1,6 +1,52 @@
-# lidgets
+# Lidgets
 
-GNOME Shell panel widgets for this machine (Fedora 44, GNOME Shell 50.4, Wayland).
+One configurable GNOME Shell extension for world clocks, weather, live system
+metrics, a remote-desktop warning, and a panel drawer. Lidgets currently
+supports GNOME Shell 50.
+
+## Installation
+
+### GNOME Extensions
+
+Once the first release is approved, install Lidgets through Extension Manager
+or its page on [extensions.gnome.org](https://extensions.gnome.org/).
+
+### GitHub release
+
+Download `panel-hub@neonshard.com.shell-extension.zip` from the latest GitHub
+release, then run:
+
+```sh
+gnome-extensions install --force panel-hub@neonshard.com.shell-extension.zip
+gnome-extensions enable panel-hub@neonshard.com
+```
+
+Log out and back in to load new extension code under Wayland. Open the
+preferences from Extension Manager or with:
+
+```sh
+gnome-extensions prefs panel-hub@neonshard.com
+```
+
+### Build from source
+
+The build requires `gnome-extensions`, Node.js, `xmllint`, and
+`glib-compile-schemas`:
+
+```sh
+git clone https://github.com/niico100/lidgets.git
+cd lidgets
+make pack
+gnome-extensions install --force dist/panel-hub@neonshard.com.shell-extension.zip
+```
+
+## Privacy and external services
+
+Lidgets contains no telemetry. When weather is enabled it sends the configured
+coordinates to Open-Meteo for forecasts. Searching for a location in
+preferences sends the entered place name to Open-Meteo's geocoding service.
+All other widgets use local system data. NVIDIA metrics optionally invoke the
+locally installed `nvidia-smi` command.
 
 ## panel-hub@neonshard.com
 
@@ -29,6 +75,9 @@ panel-hub@neonshard.com/
   extension.js     entry point; builds/tears down widgets from settings
   prefs.js         Adw preferences window (4 pages)
   stylesheet.css
+  icons/           symbolic system-metric icons
+  CREDITS          attribution for derived icon assets
+  LICENSE          GPL-2.0 license
   lib/
     sensors.js     /proc + /sys sampling; imported by prefs.js too
     metrics.js     metrics panel indicator
@@ -145,16 +194,17 @@ wrapped with `_()` at each display site instead.
 
 ## Development
 
-The extension is symlinked into place:
+For a development checkout, symlink the extension into place:
 
-```
-~/.local/share/gnome-shell/extensions/panel-hub@neonshard.com -> this directory
+```sh
+ln -s "$PWD/panel-hub@neonshard.com" \
+  ~/.local/share/gnome-shell/extensions/panel-hub@neonshard.com
 ```
 
 After editing the schema, recompile it:
 
-```
-glib-compile-schemas /home/niico/data/src/lidgets/panel-hub@neonshard.com/schemas/
+```sh
+glib-compile-schemas panel-hub@neonshard.com/schemas/
 ```
 
 **Reloading is constrained on this machine.** New extension directories are
@@ -172,7 +222,13 @@ gresource extract /usr/lib64/gnome-shell/libshell-18.so /org/gnome/shell/ui/pane
 Prefs can be tested without a restart by stubbing `ExtensionPreferences` and
 running the file under plain `gjs -m` against a real `Adw.PreferencesWindow`.
 
-## Reverting
+## Packaging
+
+Run `make pack`. The verified release archive is written to `dist/` and
+contains the JavaScript modules, SVG assets, schema source, license, and asset
+credits required by the extension.
+
+## Reverting a development installation
 
 `revert.sh` restores the extension set that was enabled before Lidgets
 (recorded in `enabled-extensions.backup`), then log out and back in.
