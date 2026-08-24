@@ -23,6 +23,20 @@ import {geocode, makeJsonFetcher, describePlace} from './lib/geocode.js';
  */
 const SEARCH_DEBOUNCE_MS = 400;
 
+/*
+ * A practical ceiling, not a technical one: beyond ten the strip is wider
+ * than any panel and folding it away stops helping. Zero is valid.
+ */
+const MAX_CLOCKS = 10;
+
+function localTimezone() {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+        return 'UTC';
+    }
+}
+
 const FALLBACK_TIMEZONES = [
     'UTC', 'Europe/London', 'Europe/Dublin', 'Europe/Paris', 'Europe/Berlin',
     'Europe/Madrid', 'Europe/Rome', 'Europe/Moscow', 'America/Los_Angeles',
@@ -138,11 +152,11 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         page.add(widgets);
 
         for (const [key, title, subtitle] of [
-            ['clocks-enabled', 'World clocks', 'Times for the zones you follow'],
-            ['weather-enabled', 'Weather', 'Current conditions and an 8-hour forecast'],
-            ['metrics-enabled', 'System metrics', 'CPU, GPU, memory, disk and more'],
-            ['remote-enabled', 'Remote desktop banner',
-                'A red warning while RDP or VNC is accepting connections'],
+            ['clocks-enabled', _('World clocks'), _('Times for the zones you follow')],
+            ['weather-enabled', _('Weather'), _('Current conditions and an 8-hour forecast')],
+            ['metrics-enabled', _('System metrics'), _('CPU, GPU, memory, disk and more')],
+            ['remote-enabled', _('Remote desktop banner'),
+                _('A red warning while RDP or VNC is accepting connections')],
         ]) {
             const row = new Adw.SwitchRow({title, subtitle});
             settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -155,7 +169,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         const placement = new Adw.PreferencesGroup({title: _('Placement')});
         page.add(placement);
 
-        placement.add(makeChoiceRow(settings, 'panel-box', 'Panel area', null, [
+        placement.add(makeChoiceRow(settings, 'panel-box', _('Panel area'), null, [
             {label: _('Right'), value: 'right'},
             {label: _('Centre'), value: 'center'},
             {label: _('Left'), value: 'left'},
@@ -178,7 +192,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         page.add(drawer);
 
         const modeRow = makeChoiceRow(settings, 'drawer-mode',
-            'Fold the widgets away', null, [
+            _('Fold the widgets away'), null, [
                 {label: _('When I click the button'), value: 'manual'},
                 {label: _('When they would not fit'), value: 'auto'},
                 {label: _('When the screen is narrower than a set width'), value: 'width'},
@@ -261,14 +275,29 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             description: _('The label is free text, so a flag emoji, a city name, or nothing at all all work.'),
         });
         page.add(list);
+        settings.bind('clocks-enabled', list, 'sensitive',
+            Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.NO_SENSITIVITY);
 
         const addButton = new Gtk.Button({
             icon_name: 'list-add-symbolic',
-            tooltip_text: 'Add a clock',
             valign: Gtk.Align.CENTER,
         });
         addButton.add_css_class('flat');
         list.set_header_suffix(addButton);
+
+        /*
+         * Ten is a practical ceiling rather than a technical one: past that
+         * the strip is wider than any panel, and the drawer stops helping.
+         * Zero is perfectly valid -- the widget simply shows nothing.
+         */
+        const updateAddButton = count => {
+            const room = count < MAX_CLOCKS;
+            addButton.sensitive = room;
+            addButton.tooltip_text = room
+                ? _('Add a clock')
+                : _('Ten clocks is the maximum');
+            list.title = `${_('Clocks')}  (${count}/${MAX_CLOCKS})`;
+        };
 
         /*
          * Rows are rebuilt only on add, remove and reorder. Editing a label
@@ -285,6 +314,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             for (const row of rows)
                 list.remove(row);
             rows = [];
+            updateAddButton(clocks.length);
 
             if (clocks.length === 0) {
                 const empty = new Adw.ActionRow({
@@ -302,7 +332,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
                     subtitle: clock[1],
                 });
 
-                const up = makeFlatButton('go-up-symbolic', 'Move earlier');
+                const up = makeFlatButton('go-up-symbolic', _('Move earlier'));
                 up.sensitive = index > 0;
                 up.connect('clicked', () => {
                     [clocks[index - 1], clocks[index]] =
@@ -311,7 +341,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
                     rebuild();
                 });
 
-                const down = makeFlatButton('go-down-symbolic', 'Move later');
+                const down = makeFlatButton('go-down-symbolic', _('Move later'));
                 down.sensitive = index < clocks.length - 1;
                 down.connect('clicked', () => {
                     [clocks[index + 1], clocks[index]] =
@@ -320,7 +350,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
                     rebuild();
                 });
 
-                const remove = makeFlatButton('user-trash-symbolic', 'Remove this clock');
+                const remove = makeFlatButton('user-trash-symbolic', _('Remove this clock'));
                 remove.connect('clicked', () => {
                     clocks.splice(index, 1);
                     save();
@@ -354,9 +384,16 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         };
 
         addButton.connect('clicked', () => {
-            clocks.push(['', 'UTC']);
+            if (clocks.length >= MAX_CLOCKS)
+                return;
+
+            // Start from the machine's own zone: more often right than UTC,
+            // and it gives the new row a meaningful title straight away.
+            const zone = localTimezone();
+            clocks.push([zone.split('/').pop().replace(/_/g, ' '), zone]);
             save();
             rebuild();
+            // Open the new row so the label and zone are ready to edit.
             rows[rows.length - 1].expanded = true;
         });
 
@@ -553,6 +590,8 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         });
         settings.bind('metrics-show-labels', labels, 'active',
             Gio.SettingsBindFlags.DEFAULT);
+        settings.bind('metrics-enabled', labels, 'sensitive',
+            Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.NO_SENSITIVITY);
         options.add(labels);
 
         const refreshAdjustment = new Gtk.Adjustment({
@@ -584,23 +623,40 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         const current = sensors.sample();
 
         for (const def of available) {
-            const row = new Adw.SwitchRow({
-                title: def.title,
-                subtitle: current[def.id]?.detail ?? '',
+            const check = new Gtk.CheckButton({
+                active: settings.get_strv('metrics-show').includes(def.id),
+                valign: Gtk.Align.CENTER,
             });
-            row.active = settings.get_strv('metrics-show').includes(def.id);
-            row.connect('notify::active', () => {
+
+            const row = new Adw.ActionRow({
+                title: _(def.title),
+                subtitle: current[def.id]?.detail ?? '',
+                activatable: true,
+            });
+            row.add_prefix(check);
+            // Makes the whole row a hit target for the checkbox.
+            row.activatable_widget = check;
+
+            check.connect('toggled', () => {
                 const shown = settings.get_strv('metrics-show');
                 const index = shown.indexOf(def.id);
-                if (row.active && index === -1)
+                if (check.active && index === -1)
                     shown.push(def.id);
-                else if (!row.active && index !== -1)
+                else if (!check.active && index !== -1)
                     shown.splice(index, 1);
                 settings.set_strv('metrics-show', shown);
             });
+
             group.add(row);
             readingsPreview.set(def.id, row);
         }
+
+        /*
+         * Choosing which readings to show is meaningless while the widget
+         * itself is off, so the whole selection follows the master switch.
+         */
+        settings.bind('metrics-enabled', group, 'sensitive',
+            Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.NO_SENSITIVITY);
 
         // A live preview makes it obvious which sensor is which.
         const previewId = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 2, () => {
@@ -615,6 +671,8 @@ export default class PanelHubPreferences extends ExtensionPreferences {
 
         const diskGroup = new Adw.PreferencesGroup({title: _('Free space')});
         page.add(diskGroup);
+        settings.bind('metrics-enabled', diskGroup, 'sensitive',
+            Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.NO_SENSITIVITY);
 
         const mounts = listMountPoints();
         const mountRow = new Adw.ComboRow({
