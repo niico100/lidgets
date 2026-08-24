@@ -4,6 +4,21 @@
     padding-right: 10px;
 }
 
+/* Compact icon/value pairs used by the system metrics panel widget. */
+.panel-hub-metrics {
+    padding-left: 10px;
+    padding-right: 10px;
+    spacing: 18px;
+}
+
+.panel-hub-metric {
+    spacing: 5px;
+}
+
+.panel-hub-metric-icon {
+    icon-size: 16px;
+}
+
 /*
  * Secondary lines inside the dropdowns. The dimming is done with actor
  * opacity from JS rather than a colour here, so it works against whatever

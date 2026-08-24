@@ -127,7 +127,7 @@ export default class PanelHubExtension extends Extension {
             if (stale)
                 stale.destroy();
 
-            const indicator = new widget.ctor(this._settings);
+            const indicator = new widget.ctor(this._settings, this.path);
             Main.panel.addToStatusArea(
                 widget.role, indicator, baseIndex + offset, box);
             this._indicators.push(indicator);

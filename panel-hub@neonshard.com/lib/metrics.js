@@ -7,6 +7,7 @@
  */
 
 import GObject from 'gi://GObject';
+import Gio from 'gi://Gio';
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
@@ -19,7 +20,7 @@ import {Sensors, METRIC_DEFS} from './sensors.js';
 
 export const MetricsIndicator = GObject.registerClass(
 class MetricsIndicator extends PanelMenu.Button {
-    _init(settings) {
+    _init(settings, extensionPath) {
         super._init(0.0, _('System Metrics'), false);
 
         this._settings = settings;
@@ -27,19 +28,28 @@ class MetricsIndicator extends PanelMenu.Button {
         this._available = this._sensors.available();
         this._tickId = 0;
         this._detailLabels = new Map();
+        this._panelLabels = new Map();
+        this._iconPath = GLib.build_filenamev([extensionPath, 'icons']);
 
         this._sensors.setDiskMount(settings.get_string('metrics-disk-mount'));
 
-        this._label = new St.Label({
-            text: '…',
+        this._panelBox = new St.BoxLayout({
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: 'panel-hub-label',
+            style_class: 'panel-hub-metrics',
         });
-        this.add_child(this._label);
+        this.add_child(this._panelBox);
+
+        this._rebuildPanel();
 
         this._settingsIds = [
-            settings.connect('changed::metrics-show', () => this._tick()),
-            settings.connect('changed::metrics-show-labels', () => this._tick()),
+            settings.connect('changed::metrics-show', () => {
+                this._rebuildPanel();
+                this._tick();
+            }),
+            settings.connect('changed::metrics-show-labels', () => {
+                this._rebuildPanel();
+                this._tick();
+            }),
             settings.connect('changed::metrics-disk-mount', () => {
                 this._sensors.setDiskMount(settings.get_string('metrics-disk-mount'));
                 this._tick();
@@ -59,6 +69,51 @@ class MetricsIndicator extends PanelMenu.Button {
         this._sensors.sample();
         this._tick();
         this._restartTimer();
+    }
+
+    _rebuildPanel() {
+        this._panelBox.destroy_all_children();
+        this._panelLabels.clear();
+
+        const selected = this._settings.get_strv('metrics-show');
+        const useSymbols = this._settings.get_boolean('metrics-show-labels');
+
+        for (const id of selected) {
+            const def = METRIC_DEFS.find(candidate => candidate.id === id);
+            if (!def || !this._available.some(candidate => candidate.id === id))
+                continue;
+
+            const metric = new St.BoxLayout({
+                y_align: Clutter.ActorAlign.CENTER,
+                style_class: 'panel-hub-metric',
+            });
+
+            if (useSymbols) {
+                const iconFile = Gio.File.new_for_path(
+                    GLib.build_filenamev([this._iconPath, def.icon]));
+                metric.add_child(new St.Icon({
+                    gicon: new Gio.FileIcon({file: iconFile}),
+                    icon_size: 16,
+                    y_align: Clutter.ActorAlign.CENTER,
+                    style_class: 'system-status-icon panel-hub-metric-icon',
+                }));
+            }
+
+            const label = new St.Label({
+                text: useSymbols ? '--' : `${def.name} --`,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            metric.add_child(label);
+            this._panelBox.add_child(metric);
+            this._panelLabels.set(id, {label, def});
+        }
+
+        if (this._panelLabels.size === 0) {
+            this._panelBox.add_child(new St.Label({
+                text: '⋯',
+                y_align: Clutter.ActorAlign.CENTER,
+            }));
+        }
     }
 
     _restartTimer() {
@@ -113,22 +168,18 @@ class MetricsIndicator extends PanelMenu.Button {
     _tick() {
         const readings = this._sensors.sample();
 
-        const selected = this._settings.get_strv('metrics-show');
         // Keep the established boolean key so existing settings remain valid:
         // true selects symbols and false selects text.
         const useSymbols = this._settings.get_boolean('metrics-show-labels');
 
-        const parts = [];
-        for (const id of selected) {
+        for (const [id, {label, def}] of this._panelLabels) {
             const reading = readings[id];
             if (!reading)
                 continue;
-            const def = METRIC_DEFS.find(d => d.id === id);
-            const prefix = useSymbols ? def?.symbol : def?.name;
-            parts.push(prefix ? `${prefix} ${reading.short}` : reading.short);
+            label.text = useSymbols
+                ? reading.short
+                : `${def.name} ${reading.short}`;
         }
-
-        this._label.text = parts.length > 0 ? parts.join('   ') : '⋯';
 
         for (const [id, label] of this._detailLabels) {
             if (readings[id])
@@ -145,5 +196,6 @@ class MetricsIndicator extends PanelMenu.Button {
             this._settings.disconnect(id);
         this._settingsIds = [];
         this._detailLabels.clear();
+        this._panelLabels.clear();
     }
 });

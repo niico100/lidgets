@@ -64,9 +64,10 @@ installed on machines with no NVIDIA card, since it ships with CUDA tooling.
 Free space is queried asynchronously because it can touch a real filesystem;
 everything else is memory-backed and sampled synchronously.
 
-Inline metric readings can use compact symbols (for example, `⚙ 12%`) or text
-labels (`CPU 12%`), selected in preferences. Their dropdown keeps the full
-descriptive names.
+Inline metric readings can use compact symbolic icons or text labels (for
+example, `CPU 12%`), selected in preferences. Their dropdown keeps the full
+descriptive names. The symbolic icon family is derived from the GPL-licensed
+[Vitals](https://github.com/corecoding/Vitals) GNOME icon set.
 
 ### Folding
 
