@@ -11,6 +11,13 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
+/*
+ * Preferences enforce the same limit, but settings can also be changed with
+ * gsettings or by an older extension version. Keep the Shell-side loop bounded
+ * so malformed state cannot make one refresh monopolize the compositor.
+ */
+const MAX_CLOCKS = 10;
+
 function formatTime(timeZone, use24h) {
     try {
         return new Intl.DateTimeFormat('en-GB', {
@@ -57,6 +64,10 @@ class ClocksIndicator extends PanelMenu.Button {
 
         this._settings = settings;
         this._tickId = 0;
+        this._refreshIdleId = 0;
+        this._refreshing = false;
+        this._destroyed = false;
+        this._warnedClockOverflow = false;
 
         this._label = new St.Label({
             y_align: Clutter.ActorAlign.CENTER,
@@ -65,7 +76,7 @@ class ClocksIndicator extends PanelMenu.Button {
         this.add_child(this._label);
 
         this._settingsIds = ['clocks', 'clock-24h', 'clock-separator'].map(
-            key => settings.connect(`changed::${key}`, () => this._refresh()));
+            key => settings.connect(`changed::${key}`, () => this._queueRefresh()));
 
         this.connect('destroy', () => this._onDestroy());
 
@@ -74,19 +85,52 @@ class ClocksIndicator extends PanelMenu.Button {
     }
 
     _clocks() {
-        return this._settings.get_value('clocks').deepUnpack();
+        const clocks = this._settings.get_value('clocks').deepUnpack();
+        if (clocks.length <= MAX_CLOCKS) {
+            this._warnedClockOverflow = false;
+            return clocks;
+        }
+
+        if (!this._warnedClockOverflow) {
+            console.warn(`Ignoring clocks beyond the ${MAX_CLOCKS}-clock limit`);
+            this._warnedClockOverflow = true;
+        }
+        return clocks.slice(0, MAX_CLOCKS);
+    }
+
+    /*
+     * GSettings signals are synchronous. Coalesce a burst onto one idle pass,
+     * keeping preferences changes out of the signal callback itself.
+     */
+    _queueRefresh() {
+        if (this._destroyed || this._refreshIdleId !== 0)
+            return;
+
+        this._refreshIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+            this._refreshIdleId = 0;
+            this._refresh();
+            return GLib.SOURCE_REMOVE;
+        });
     }
 
     _refresh() {
-        const use24h = this._settings.get_boolean('clock-24h');
-        const separator = this._settings.get_string('clock-separator');
-        const clocks = this._clocks();
+        if (this._destroyed || this._refreshing)
+            return;
 
-        this._label.text = clocks
-            .map(([name, zone]) => `${name} ${formatTime(zone, use24h)}`.trim())
-            .join(separator);
+        this._refreshing = true;
+        try {
+            const use24h = this._settings.get_boolean('clock-24h');
+            const separator = this._settings.get_string('clock-separator');
+            const clocks = this._clocks();
 
-        this._rebuildMenu(clocks, use24h);
+            this._label.text = clocks
+                .map(([name, zone]) => `${name} ${formatTime(zone, use24h)}`.trim())
+                .join(separator);
+
+            this._rebuildMenu(clocks, use24h);
+        } finally {
+            this._refreshing = false;
+        }
     }
 
     _rebuildMenu(clocks, use24h) {
@@ -133,16 +177,21 @@ class ClocksIndicator extends PanelMenu.Button {
         this._tickId = GLib.timeout_add_seconds(
             GLib.PRIORITY_DEFAULT, delay, () => {
                 this._tickId = 0;
-                this._refresh();
+                this._queueRefresh();
                 this._scheduleTick();
                 return GLib.SOURCE_REMOVE;
             });
     }
 
     _onDestroy() {
+        this._destroyed = true;
         if (this._tickId !== 0) {
             GLib.source_remove(this._tickId);
             this._tickId = 0;
+        }
+        if (this._refreshIdleId !== 0) {
+            GLib.source_remove(this._refreshIdleId);
+            this._refreshIdleId = 0;
         }
         for (const id of this._settingsIds ?? [])
             this._settings.disconnect(id);
