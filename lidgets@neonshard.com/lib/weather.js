@@ -39,6 +39,9 @@ const WMO_SYMBOLS = {
     95: '⛈️', 96: '⛈️', 99: '⛈️',
 };
 
+const HTTP_TIMEOUT_SECONDS = 15;
+const MAX_DISPLAY_CITY_LENGTH = 160;
+
 // Resolved lazily: at module scope the gettext domain is not bound yet.
 const noLocationText = () => _('\u26a0 Set a weather location');
 
@@ -58,7 +61,8 @@ class WeatherIndicator extends PanelMenu.Button {
         this._lon = null;
         this._city = null;
         this._forecast = null;
-        this._seeding = false;
+        this._destroyed = false;
+        this._requestGeneration = 0;
 
         this._label = new St.Label({
             text: '⏳ …',
@@ -67,7 +71,7 @@ class WeatherIndicator extends PanelMenu.Button {
         });
         this.add_child(this._label);
 
-        this._session = new Soup.Session();
+        this._session = new Soup.Session({timeout: HTTP_TIMEOUT_SECONDS});
         this._cancellable = new Gio.Cancellable();
         this._fetchJson = makeJsonFetcher(this._session, this._cancellable);
 
@@ -106,6 +110,9 @@ class WeatherIndicator extends PanelMenu.Button {
      * rather than hammering the API while the user is still adjusting.
      */
     _reload() {
+        if (this._destroyed)
+            return;
+        this._requestGeneration++;
         if (this._reloadId !== 0)
             GLib.source_remove(this._reloadId);
 
@@ -117,11 +124,12 @@ class WeatherIndicator extends PanelMenu.Button {
     }
 
     _doReload() {
+        const generation = ++this._requestGeneration;
         this._forecast = null;
 
         const city = this._settings.get_string('weather-city');
         if (city === '') {
-            this._seedFromTimezone();
+            this._seedFromTimezone(generation);
             return;
         }
 
@@ -138,10 +146,7 @@ class WeatherIndicator extends PanelMenu.Button {
      * That name is geocoded like any the user could have typed. If it does not
      * resolve -- "UTC", say -- the panel simply asks them to pick one.
      */
-    _seedFromTimezone() {
-        if (this._seeding)
-            return;
-
+    _seedFromTimezone(generation) {
         let zone;
         try {
             zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -155,10 +160,10 @@ class WeatherIndicator extends PanelMenu.Button {
             return;
         }
 
-        this._seeding = true;
         this._label.text = '\u23f3 …';
         geocode(this._fetchJson, guess, places => {
-            this._seeding = false;
+            if (this._destroyed || generation !== this._requestGeneration)
+                return;
             const place = places?.[0];
             if (!place) {
                 this._label.text = noLocationText();
@@ -176,8 +181,10 @@ class WeatherIndicator extends PanelMenu.Button {
     }
 
     _fetchWeather() {
-        if (this._lat === null || this._lon === null)
+        if (this._destroyed || this._lat === null || this._lon === null)
             return;
+
+        const generation = ++this._requestGeneration;
 
         const imperial = this._settings.get_string('weather-units') === 'imperial';
 
@@ -197,6 +204,8 @@ class WeatherIndicator extends PanelMenu.Button {
             '&forecast_days=2&timezone=auto';
 
         this._fetchJson(url, data => {
+            if (this._destroyed || generation !== this._requestGeneration)
+                return;
             if (!data || !data.current || !data.hourly || !data.daily) {
                 if (!this._forecast)
                     this._label.text = '🌐 weather unavailable';
@@ -265,7 +274,8 @@ class WeatherIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(heading);
 
         const location = new PopupMenu.PopupMenuItem(
-            `${_('Weather for')} ${this._city || _('unknown location')}`,
+            `${_('Weather for')} ${(this._city || _('unknown location'))
+                .slice(0, MAX_DISPLAY_CITY_LENGTH)}`,
             {reactive: false, can_focus: false});
         location.label.add_style_class_name('lidgets-dim');
         location.label.opacity = 160;
@@ -318,6 +328,8 @@ class WeatherIndicator extends PanelMenu.Button {
     }
 
     _onDestroy() {
+        this._destroyed = true;
+        this._requestGeneration++;
         for (const id of [this._weatherTimeoutId, this._reloadId]) {
             if (id !== 0)
                 GLib.source_remove(id);

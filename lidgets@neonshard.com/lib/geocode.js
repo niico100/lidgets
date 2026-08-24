@@ -12,13 +12,14 @@ import Soup from 'gi://Soup?version=3.0';
 
 const GEOCODER = 'https://geocoding-api.open-meteo.com/v1/search';
 const MAX_RESULTS = 8;
+const MAX_QUERY_LENGTH = 200;
 
 /*
  * `fetchJson` is (url, callback) -> callback(parsedOrNull).
  * `onDone` receives an array of places, or null if the lookup failed.
  */
 export function geocode(fetchJson, query, onDone) {
-    const trimmed = query.trim();
+    const trimmed = query.trim().slice(0, MAX_QUERY_LENGTH);
     if (trimmed === '') {
         onDone([]);
         return;
@@ -46,18 +47,20 @@ export function makeJsonFetcher(session, cancellable) {
         const message = Soup.Message.new('GET', url);
         session.send_and_read_async(
             message, GLib.PRIORITY_DEFAULT, cancellable, (source, result) => {
+                let data = null;
                 try {
                     const bytes = source.send_and_read_finish(result);
-                    if (message.get_status() !== Soup.Status.OK) {
-                        onDone(null);
-                        return;
+                    if (message.get_status() === Soup.Status.OK) {
+                        data = JSON.parse(
+                            new TextDecoder('utf-8').decode(bytes.get_data()));
                     }
-                    onDone(JSON.parse(
-                        new TextDecoder('utf-8').decode(bytes.get_data())));
                 } catch {
                     // Cancelled, offline, or malformed: all "no answer".
-                    onDone(null);
                 }
+
+                // Keep consumer exceptions out of the transport catch block;
+                // otherwise a failing callback would be invoked a second time.
+                onDone(data);
             });
     };
 }

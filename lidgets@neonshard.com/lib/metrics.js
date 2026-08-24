@@ -75,7 +75,11 @@ class MetricsIndicator extends PanelMenu.Button {
         this._panelBox.destroy_all_children();
         this._panelLabels.clear();
 
-        const selected = this._settings.get_strv('metrics-show');
+        // Preferences only write known ids, but external settings edits can
+        // contain duplicates or an arbitrarily long list. At most one actor
+        // per metric definition can ever be useful.
+        const selected = [...new Set(this._settings.get_strv('metrics-show'))]
+            .slice(0, METRIC_DEFS.length);
         const useSymbols = this._settings.get_boolean('metrics-show-labels');
 
         for (const id of selected) {

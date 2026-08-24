@@ -22,6 +22,7 @@ import {geocode, makeJsonFetcher, describePlace} from './lib/geocode.js';
  * letter, short enough that the list still feels like it follows the keyboard.
  */
 const SEARCH_DEBOUNCE_MS = 400;
+const HTTP_TIMEOUT_SECONDS = 15;
 
 /*
  * A practical ceiling, not a technical one: beyond ten the strip is wider
@@ -183,7 +184,7 @@ function makeFlatButton(iconName, tooltip) {
     return button;
 }
 
-export default class PanelHubPreferences extends ExtensionPreferences {
+export default class LidgetsPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
         window.set_default_size(760, 820);
@@ -636,8 +637,9 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             }
         };
 
-        const session = new Soup.Session();
-        const fetchJson = makeJsonFetcher(session, null);
+        const session = new Soup.Session({timeout: HTTP_TIMEOUT_SECONDS});
+        const searchCancellable = new Gio.Cancellable();
+        const fetchJson = makeJsonFetcher(session, searchCancellable);
 
         /*
          * Search as they type, but only once they pause: a request per
@@ -684,6 +686,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
                 searchTimeoutId = 0;
             }
             searchSerial++;
+            searchCancellable.cancel();
         });
 
         settings.connect('changed::weather-city', refreshCurrent);

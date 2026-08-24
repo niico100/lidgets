@@ -17,6 +17,16 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
  * so malformed state cannot make one refresh monopolize the compositor.
  */
 const MAX_CLOCKS = 10;
+const MAX_LABEL_LENGTH = 128;
+const MAX_SEPARATOR_LENGTH = 32;
+
+function boundedText(text, maxLength) {
+    let result = text.slice(0, maxLength);
+    const last = result.charCodeAt(result.length - 1);
+    if (last >= 0xD800 && last <= 0xDBFF)
+        result = result.slice(0, -1);
+    return result;
+}
 
 function formatTime(timeZone, use24h) {
     try {
@@ -120,11 +130,14 @@ class ClocksIndicator extends PanelMenu.Button {
         this._refreshing = true;
         try {
             const use24h = this._settings.get_boolean('clock-24h');
-            const separator = this._settings.get_string('clock-separator');
+            const separator = boundedText(
+                this._settings.get_string('clock-separator'), MAX_SEPARATOR_LENGTH);
             const clocks = this._clocks();
 
             this._label.text = clocks
-                .map(([name, zone]) => `${name} ${formatTime(zone, use24h)}`.trim())
+                .map(([name, zone]) => (
+                    `${boundedText(name, MAX_LABEL_LENGTH)} ` +
+                    formatTime(zone, use24h)).trim())
                 .join(separator);
 
             this._rebuildMenu(clocks, use24h);
@@ -143,6 +156,7 @@ class ClocksIndicator extends PanelMenu.Button {
         }
 
         for (const [name, zone] of clocks) {
+            const displayName = boundedText(name, MAX_LABEL_LENGTH);
             const item = new PopupMenu.PopupBaseMenuItem({
                 reactive: false,
                 can_focus: false,
@@ -153,7 +167,7 @@ class ClocksIndicator extends PanelMenu.Button {
                 x_expand: true,
             });
             box.add_child(new St.Label({
-                text: `${name || zone}   ${formatTime(zone, use24h)}`,
+                text: `${displayName || zone}   ${formatTime(zone, use24h)}`,
                 style: 'font-weight: bold;',
             }));
             box.add_child(new St.Label({

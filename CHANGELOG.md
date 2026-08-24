@@ -10,6 +10,8 @@
 - Include the country flag in automatically generated clock labels where tzdata
   identifies one, and keep that label in sync when its timezone changes.
 - Add a per-clock option to show the city or display only its country flag.
+- Bound and coalesce clock refreshes, constrain malformed display settings,
+  and ignore stale or post-destruction weather callbacks.
 
 ## 1.0.0 — 2026-08-24
 
