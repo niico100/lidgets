@@ -10,6 +10,9 @@ import GLib from 'gi://GLib';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+import {
+    log, monotonicMs, warn, warnRateLimited,
+} from './diagnostics.js';
 
 /*
  * Preferences enforce the same limit, but settings can also be changed with
@@ -19,6 +22,7 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 const MAX_CLOCKS = 10;
 const MAX_LABEL_LENGTH = 128;
 const MAX_SEPARATOR_LENGTH = 32;
+const SLOW_REFRESH_MS = 100;
 
 function boundedText(text, maxLength) {
     let result = text.slice(0, maxLength);
@@ -78,6 +82,8 @@ class ClocksIndicator extends PanelMenu.Button {
         this._refreshing = false;
         this._destroyed = false;
         this._warnedClockOverflow = false;
+        this._refreshSequence = 0;
+        this._pendingRefreshTrace = null;
 
         this._label = new St.Label({
             y_align: Clutter.ActorAlign.CENTER,
@@ -86,7 +92,8 @@ class ClocksIndicator extends PanelMenu.Button {
         this.add_child(this._label);
 
         this._settingsIds = ['clocks', 'clock-24h', 'clock-separator'].map(
-            key => settings.connect(`changed::${key}`, () => this._queueRefresh()));
+            key => settings.connect(
+                `changed::${key}`, () => this._queueRefresh(key)));
 
         this.connect('destroy', () => this._onDestroy());
 
@@ -102,7 +109,7 @@ class ClocksIndicator extends PanelMenu.Button {
         }
 
         if (!this._warnedClockOverflow) {
-            console.warn(`Ignoring clocks beyond the ${MAX_CLOCKS}-clock limit`);
+            warn(`Ignoring clocks beyond the ${MAX_CLOCKS}-clock limit`);
             this._warnedClockOverflow = true;
         }
         return clocks.slice(0, MAX_CLOCKS);
@@ -112,21 +119,47 @@ class ClocksIndicator extends PanelMenu.Button {
      * GSettings signals are synchronous. Coalesce a burst onto one idle pass,
      * keeping preferences changes out of the signal callback itself.
      */
-    _queueRefresh() {
-        if (this._destroyed || this._refreshIdleId !== 0)
+    _queueRefresh(settingKey = null) {
+        if (this._destroyed) {
+            if (settingKey) {
+                warnRateLimited('clock-refresh-after-destroy',
+                    'Ignored a clock setting change after destruction');
+            }
+            return;
+        }
+
+        if (settingKey) {
+            if (!this._pendingRefreshTrace) {
+                const id = ++this._refreshSequence;
+                this._pendingRefreshTrace = {id, keys: new Set()};
+                log(`Clock settings change #${id} received key=${settingKey}`);
+            }
+            this._pendingRefreshTrace.keys.add(settingKey);
+        }
+
+        if (this._refreshIdleId !== 0)
             return;
 
         this._refreshIdleId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._refreshIdleId = 0;
-            this._refresh();
+            const trace = this._pendingRefreshTrace;
+            this._pendingRefreshTrace = null;
+            this._refresh(trace);
             return GLib.SOURCE_REMOVE;
         });
     }
 
-    _refresh() {
-        if (this._destroyed || this._refreshing)
+    _refresh(trace = null) {
+        if (this._destroyed)
             return;
+        if (this._refreshing) {
+            warnRateLimited('clock-refresh-reentry',
+                'Prevented a re-entrant clock refresh');
+            return;
+        }
 
+        const started = monotonicMs();
+        let phase = 'reading settings';
         this._refreshing = true;
         try {
             const use24h = this._settings.get_boolean('clock-24h');
@@ -134,13 +167,39 @@ class ClocksIndicator extends PanelMenu.Button {
                 this._settings.get_string('clock-separator'), MAX_SEPARATOR_LENGTH);
             const clocks = this._clocks();
 
+            if (trace) {
+                const keys = [...trace.keys].sort().join(',');
+                log(`Clock refresh #${trace.id} started ` +
+                    `keys=${keys} count=${clocks.length}`);
+            }
+
+            phase = 'updating panel label';
             this._label.text = clocks
                 .map(([name, zone]) => (
                     `${boundedText(name, MAX_LABEL_LENGTH)} ` +
                     formatTime(zone, use24h)).trim())
                 .join(separator);
 
+            phase = 'rebuilding menu';
+            if (trace)
+                log(`Clock menu rebuild #${trace.id} started`);
             this._rebuildMenu(clocks, use24h);
+
+            const elapsed = monotonicMs() - started;
+            if (trace) {
+                log(`Clock refresh #${trace.id} completed ` +
+                    `elapsedMs=${elapsed.toFixed(1)}`);
+            }
+            if (elapsed > SLOW_REFRESH_MS) {
+                warnRateLimited('slow-clock-refresh',
+                    `Slow clock refresh phase=complete ` +
+                    `elapsedMs=${elapsed.toFixed(1)} count=${clocks.length}`);
+            }
+        } catch (e) {
+            const id = trace ? ` #${trace.id}` : '';
+            console.error(`[Lidgets] Clock refresh${id} failed ` +
+                `phase=${phase}: ${e.message}`);
+            throw e;
         } finally {
             this._refreshing = false;
         }
@@ -207,6 +266,7 @@ class ClocksIndicator extends PanelMenu.Button {
             GLib.source_remove(this._refreshIdleId);
             this._refreshIdleId = 0;
         }
+        this._pendingRefreshTrace = null;
         for (const id of this._settingsIds ?? [])
             this._settings.disconnect(id);
         this._settingsIds = [];
