@@ -83,22 +83,22 @@ const N_ = text => text;
 
 /*
  * Every metric the widget knows about. `id` is what lands in the
- * metrics-show setting, `name` is the prefix shown in the panel, and `title`
- * is the longer form used in the dropdown and in prefs.
+ * metrics-show setting, `name` and `symbol` are the two available panel
+ * prefixes, and `title` is the longer form used in the dropdown and in prefs.
  */
 export const METRIC_DEFS = [
-    {id: 'cpu', name: 'CPU', title: N_('CPU load')},
-    {id: 'cpu-temp', name: 'CPU', title: N_('CPU temperature')},
-    {id: 'gpu', name: 'GPU', title: N_('GPU load')},
-    {id: 'gpu-freq', name: 'GPU', title: N_('GPU clock')},
-    {id: 'gpu-temp', name: 'GPU', title: N_('GPU temperature')},
-    {id: 'vram', name: 'VRAM', title: N_('Video memory used')},
-    {id: 'ram', name: 'RAM', title: N_('Memory used')},
-    {id: 'swap', name: 'SWAP', title: N_('Swap used')},
-    {id: 'disk', name: 'DISK', title: N_('Free space')},
-    {id: 'net', name: 'NET', title: N_('Network throughput')},
-    {id: 'fan', name: 'FAN', title: N_('Fan speed')},
-    {id: 'battery', name: 'BAT', title: N_('Battery')},
+    {id: 'cpu', name: 'CPU', symbol: '⚙', title: N_('CPU load')},
+    {id: 'cpu-temp', name: 'CPU', symbol: '⚙♨', title: N_('CPU temperature')},
+    {id: 'gpu', name: 'GPU', symbol: '▣', title: N_('GPU load')},
+    {id: 'gpu-freq', name: 'GPU', symbol: '▣∿', title: N_('GPU clock')},
+    {id: 'gpu-temp', name: 'GPU', symbol: '▣♨', title: N_('GPU temperature')},
+    {id: 'vram', name: 'VRAM', symbol: '▧', title: N_('Video memory used')},
+    {id: 'ram', name: 'RAM', symbol: '▤', title: N_('Memory used')},
+    {id: 'swap', name: 'SWAP', symbol: '⇄', title: N_('Swap used')},
+    {id: 'disk', name: 'DISK', symbol: '◉', title: N_('Free space')},
+    {id: 'net', name: 'NET', symbol: '⇅', title: N_('Network throughput')},
+    {id: 'fan', name: 'FAN', symbol: '✣', title: N_('Fan speed')},
+    {id: 'battery', name: 'BAT', symbol: '▰', title: N_('Battery')},
 ];
 
 export class Sensors {

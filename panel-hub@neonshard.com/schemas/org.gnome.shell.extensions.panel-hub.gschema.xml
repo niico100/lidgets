@@ -6,7 +6,7 @@
     <!-- Global -->
     <key name="master-enabled" type="b">
       <default>true</default>
-      <summary>Show Panel Hub</summary>
+      <summary>Show Lidgets</summary>
       <description>Master switch. When off, every widget is removed from the panel.</description>
     </key>
     <key name="panel-box" type="s">
@@ -100,10 +100,6 @@
       <summary>Units</summary>
       <description>metric: Celsius and km/h. imperial: Fahrenheit and mph.</description>
     </key>
-    <key name="weather-show-city" type="b">
-      <default>true</default>
-      <summary>Show the place name in the panel</summary>
-    </key>
     <key name="weather-refresh-minutes" type="i">
       <default>30</default>
       <range min="5" max="360"/>
@@ -122,7 +118,7 @@
     </key>
     <key name="metrics-show-labels" type="b">
       <default>true</default>
-      <summary>Prefix each metric with its name</summary>
+      <summary>Use symbol rather than text prefixes for metrics</summary>
     </key>
     <key name="metrics-disk-mount" type="s">
       <default>'/'</default>

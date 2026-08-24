@@ -82,7 +82,7 @@ export class Drawer {
     /* ---------------------------------------------------------------- setup */
 
     _buildToggle() {
-        this._toggle = new PanelMenu.Button(0.0, _('Panel Hub'), true);
+        this._toggle = new PanelMenu.Button(0.0, _('Lidgets'), true);
         this._toggleIcon = new St.Icon({
             icon_name: 'pan-end-symbolic',
             style_class: 'system-status-icon',
@@ -246,8 +246,8 @@ export class Drawer {
             ? (this._panelAtBottom() ? 'pan-up-symbolic' : 'pan-down-symbolic')
             : 'pan-end-symbolic';
         this._toggle.set_accessible_name(this._collapsed
-            ? _('Show folded Panel Hub widgets')
-            : _('Fold Panel Hub widgets away'));
+            ? _('Show folded Lidgets widgets')
+            : _('Fold Lidgets widgets away'));
 
         // Manual restoration would immediately be undone in automatic modes.
         this._setRestoreVisible(this._collapsed &&

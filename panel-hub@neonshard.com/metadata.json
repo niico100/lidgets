@@ -1,6 +1,6 @@
 {
   "uuid": "panel-hub@neonshard.com",
-  "name": "Panel Hub",
+  "name": "Lidgets",
   "description": "World clocks, weather and system metrics in one configurable panel widget, with a drawer that folds them away when the panel is short of room.",
   "shell-version": [
     "50"

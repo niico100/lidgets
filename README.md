@@ -64,6 +64,10 @@ installed on machines with no NVIDIA card, since it ships with CUDA tooling.
 Free space is queried asynchronously because it can touch a real filesystem;
 everything else is memory-backed and sampled synchronously.
 
+Inline metric readings can use compact symbols (for example, `⚙ 12%`) or text
+labels (`CPU 12%`), selected in preferences. Their dropdown keeps the full
+descriptive names.
+
 ### Folding
 
 Default mode is `manual`: a `›` button in the panel folds the widgets into the
@@ -110,6 +114,9 @@ Always chosen by the user: type a place, pick it from the live-searched list.
 Nothing looks up the IP address — that used to mean a plaintext `http://`
 request to a third party that answered with the user's city, which is a poor
 default to ship.
+
+The compact panel reading omits the city to save space; clicking the weather
+opens a forecast headed with the selected location.
 
 On first run the place is guessed from the machine's own IANA timezone, which
 names a city: `Europe/London` → `London`, `America/Argentina/Buenos_Aires` →
@@ -166,5 +173,5 @@ running the file under plain `gjs -m` against a real `Adw.PreferencesWindow`.
 
 ## Reverting
 
-`revert.sh` restores the extension set that was enabled before Panel Hub
+`revert.sh` restores the extension set that was enabled before Lidgets
 (recorded in `enabled-extensions.backup`), then log out and back in.

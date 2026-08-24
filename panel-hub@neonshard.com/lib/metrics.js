@@ -114,7 +114,9 @@ class MetricsIndicator extends PanelMenu.Button {
         const readings = this._sensors.sample();
 
         const selected = this._settings.get_strv('metrics-show');
-        const showLabels = this._settings.get_boolean('metrics-show-labels');
+        // Keep the established boolean key so existing settings remain valid:
+        // true selects symbols and false selects text.
+        const useSymbols = this._settings.get_boolean('metrics-show-labels');
 
         const parts = [];
         for (const id of selected) {
@@ -122,9 +124,8 @@ class MetricsIndicator extends PanelMenu.Button {
             if (!reading)
                 continue;
             const def = METRIC_DEFS.find(d => d.id === id);
-            parts.push(showLabels && def
-                ? `${def.name} ${reading.short}`
-                : reading.short);
+            const prefix = useSymbols ? def?.symbol : def?.name;
+            parts.push(prefix ? `${prefix} ${reading.short}` : reading.short);
         }
 
         this._label.text = parts.length > 0 ? parts.join('   ') : '⋯';

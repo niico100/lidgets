@@ -133,13 +133,13 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         });
 
         const main = new Adw.PreferencesGroup({
-            title: _('Panel Hub'),
+            title: _('Lidgets'),
             description: _('Turn the whole set of widgets on or off, and choose where they sit.'),
         });
         page.add(main);
 
         const master = new Adw.SwitchRow({
-            title: _('Show Panel Hub'),
+            title: _('Show Lidgets'),
             subtitle: _('Master switch for every widget below'),
         });
         settings.bind('master-enabled', master, 'active', Gio.SettingsBindFlags.DEFAULT);
@@ -421,13 +421,6 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             {label: _('Fahrenheit'), value: 'imperial'},
         ]));
 
-        const showCity = new Adw.SwitchRow({
-            title: _('Show the place name in the panel'),
-        });
-        settings.bind('weather-show-city', showCity, 'active',
-            Gio.SettingsBindFlags.DEFAULT);
-        options.add(showCity);
-
         const refreshAdjustment = new Gtk.Adjustment({
             lower: 5, upper: 360, step_increment: 5, page_increment: 30,
         });
@@ -584,15 +577,17 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         settings.bind('metrics-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(enabled);
 
-        const labels = new Adw.SwitchRow({
-            title: _('Label each reading'),
-            subtitle: _('Shows "CPU 12%" rather than just "12%"'),
+        const prefixStyle = new Adw.ComboRow({
+            title: _('Reading prefixes'),
+            subtitle: _('Choose symbols or text labels'),
+            model: Gtk.StringList.new([_('Symbols'), _('Text')]),
         });
-        settings.bind('metrics-show-labels', labels, 'active',
-            Gio.SettingsBindFlags.DEFAULT);
-        settings.bind('metrics-enabled', labels, 'sensitive',
+        prefixStyle.selected = settings.get_boolean('metrics-show-labels') ? 0 : 1;
+        prefixStyle.connect('notify::selected', () =>
+            settings.set_boolean('metrics-show-labels', prefixStyle.selected === 0));
+        settings.bind('metrics-enabled', prefixStyle, 'sensitive',
             Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.NO_SENSITIVITY);
-        options.add(labels);
+        options.add(prefixStyle);
 
         const refreshAdjustment = new Gtk.Adjustment({
             lower: 1, upper: 60, step_increment: 1, page_increment: 5,

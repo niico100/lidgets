@@ -1,14 +1,14 @@
 # SOME DESCRIPTIVE TITLE.
-# Copyright (C) YEAR Panel Hub contributors
-# This file is distributed under the same license as the Panel Hub package.
+# Copyright (C) YEAR Lidgets contributors
+# This file is distributed under the same license as the Lidgets package.
 # FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
 #
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: Panel Hub 1\n"
+"Project-Id-Version: Lidgets 1\n"
 "Report-Msgid-Bugs-To: https://github.com/neonshard/panel-hub/issues\n"
-"POT-Creation-Date: 2026-08-24 13:15+0100\n"
+"POT-Creation-Date: 2026-08-24 14:57+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -25,8 +25,8 @@ msgstr ""
 msgid "General"
 msgstr ""
 
-#: prefs.js:136 lib/drawer.js:84
-msgid "Panel Hub"
+#: prefs.js:136 lib/drawer.js:85
+msgid "Lidgets"
 msgstr ""
 
 #: prefs.js:137
@@ -34,7 +34,7 @@ msgid "Turn the whole set of widgets on or off, and choose where they sit."
 msgstr ""
 
 #: prefs.js:142
-msgid "Show Panel Hub"
+msgid "Show Lidgets"
 msgstr ""
 
 #: prefs.js:143
@@ -175,7 +175,7 @@ msgstr ""
 msgid "Clocks"
 msgstr ""
 
-#: prefs.js:253 prefs.js:412 prefs.js:580
+#: prefs.js:253 prefs.js:412 prefs.js:573
 msgid "Display"
 msgstr ""
 
@@ -249,81 +249,85 @@ msgstr ""
 msgid "Fahrenheit"
 msgstr ""
 
-#: prefs.js:425
-msgid "Show the place name in the panel"
-msgstr ""
-
-#: prefs.js:436
+#: prefs.js:429
 msgid "Refresh every"
 msgstr ""
 
-#: prefs.js:437
+#: prefs.js:430
 msgid "Minutes between forecast updates"
 msgstr ""
 
-#: prefs.js:444
+#: prefs.js:437
 msgid "Location"
 msgstr ""
 
-#: prefs.js:445
+#: prefs.js:438
 msgid ""
 "Type a town or city, then pick it from the list. Your location is never "
 "looked up from your IP address."
 msgstr ""
 
-#: prefs.js:449
+#: prefs.js:442
 msgid "Using"
 msgstr ""
 
-#: prefs.js:452
+#: prefs.js:445
 msgid "Search for a place"
 msgstr ""
 
-#: prefs.js:465
+#: prefs.js:458
 msgid "Not set yet — it will be guessed from your time zone"
 msgstr ""
 
-#: prefs.js:486
+#: prefs.js:479
 msgid "Could not reach the place lookup service"
 msgstr ""
 
-#: prefs.js:490
+#: prefs.js:483
 msgid "No matching places"
 msgstr ""
 
-#: prefs.js:576
+#: prefs.js:569
 msgid "Metrics"
 msgstr ""
 
-#: prefs.js:583
+#: prefs.js:576
 msgid "Show system metrics"
 msgstr ""
 
-#: prefs.js:588
-msgid "Label each reading"
+#: prefs.js:581
+msgid "Reading prefixes"
 msgstr ""
 
-#: prefs.js:589
-msgid "Shows \"CPU 12%\" rather than just \"12%\""
+#: prefs.js:582
+msgid "Choose symbols or text labels"
 msgstr ""
 
-#: prefs.js:602
+#: prefs.js:583
+msgid "Symbols"
+msgstr ""
+
+#: prefs.js:583
+msgid "Text"
+msgstr ""
+
+#: prefs.js:597
 msgid "Sample every"
 msgstr ""
 
-#: prefs.js:603
+#: prefs.js:598
 msgid "Seconds between readings"
 msgstr ""
 
-#: prefs.js:611
+#: prefs.js:606
 msgid "Show in the panel"
 msgstr ""
 
-#: prefs.js:672 lib/sensors.js:98
+#: prefs.js:667 lib/sensors.js:98
 msgid "Free space"
 msgstr ""
 
-#: prefs.js:679
+#: prefs.js:674
 msgid "Report free space on"
 msgstr ""
 
@@ -335,16 +339,16 @@ msgstr ""
 msgid "No clocks configured"
 msgstr ""
 
-#: lib/drawer.js:146
+#: lib/drawer.js:131 lib/drawer.js:136
 msgid "Show these in the panel"
 msgstr ""
 
-#: lib/drawer.js:231
-msgid "Show folded Panel Hub widgets"
+#: lib/drawer.js:249
+msgid "Show folded Lidgets widgets"
 msgstr ""
 
-#: lib/drawer.js:232
-msgid "Fold Panel Hub widgets away"
+#: lib/drawer.js:250
+msgid "Fold Lidgets widgets away"
 msgstr ""
 
 #: lib/metrics.js:23
@@ -407,18 +411,18 @@ msgstr ""
 msgid "⚠ Set a weather location"
 msgstr ""
 
-#: lib/weather.js:257
+#: lib/weather.js:252
 msgid "Forecast is loading…"
 msgstr ""
 
-#: lib/weather.js:273
+#: lib/weather.js:268
 msgid "Weather for"
 msgstr ""
 
-#: lib/weather.js:273
+#: lib/weather.js:268
 msgid "unknown location"
 msgstr ""
 
-#: lib/weather.js:279
+#: lib/weather.js:274
 msgid "Next 8 hours"
 msgstr ""

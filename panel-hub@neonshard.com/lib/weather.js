@@ -71,15 +71,11 @@ class WeatherIndicator extends PanelMenu.Button {
         this._cancellable = new Gio.Cancellable();
         this._fetchJson = makeJsonFetcher(this._session, this._cancellable);
 
-        /*
-         * A location or unit change invalidates the cached forecast entirely,
-         * so it has to re-resolve; the display-only keys just re-render.
-         */
+        // A location or unit change invalidates the cached forecast entirely.
         this._settingsIds = [
             ...['weather-latitude', 'weather-longitude',
                 'weather-city', 'weather-units'].map(
                 key => settings.connect(`changed::${key}`, () => this._reload())),
-            settings.connect('changed::weather-show-city', () => this._render()),
             settings.connect('changed::weather-refresh-minutes',
                 () => this._restartWeatherTimer()),
         ];
@@ -236,14 +232,12 @@ class WeatherIndicator extends PanelMenu.Button {
         const nextEight = data.hourly.precipitation_probability.slice(start, start + 8);
         const rainChance = nextEight.length > 0 ? Math.max(...nextEight) : 0;
 
-        const showCity = this._settings.get_boolean('weather-show-city');
-        const city = showCity && this._city ? `${this._city} ` : '';
         const current = Math.round(data.current.temperature_2m);
         const high = Math.round(data.daily.temperature_2m_max[0]);
         const low = Math.round(data.daily.temperature_2m_min[0]);
 
         this._label.text =
-            `${city}${symbolFor(data.current.weather_code)} ${current}°  ` +
+            `${symbolFor(data.current.weather_code)} ${current}°  ` +
             `${rainChance}%🌧  H:${high}° L:${low}°`;
 
         this._buildMenu();
