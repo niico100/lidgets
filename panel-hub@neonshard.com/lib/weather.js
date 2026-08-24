@@ -18,7 +18,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {geocode} from './geocode.js';
+import {geocode, makeJsonFetcher} from './geocode.js';
 
 
 // WMO weather code -> symbol, per https://open-meteo.com/en/docs
@@ -69,6 +69,7 @@ class WeatherIndicator extends PanelMenu.Button {
 
         this._session = new Soup.Session();
         this._cancellable = new Gio.Cancellable();
+        this._fetchJson = makeJsonFetcher(this._session, this._cancellable);
 
         /*
          * A location or unit change invalidates the cached forecast entirely,
@@ -160,7 +161,7 @@ class WeatherIndicator extends PanelMenu.Button {
 
         this._seeding = true;
         this._label.text = '\u23f3 …';
-        geocode(this._fetchJson.bind(this), guess, places => {
+        geocode(this._fetchJson, guess, places => {
             this._seeding = false;
             const place = places?.[0];
             if (!place) {
@@ -333,6 +334,7 @@ class WeatherIndicator extends PanelMenu.Button {
         this._cancellable?.cancel();
         this._cancellable = null;
         this._session = null;
+        this._fetchJson = null;
 
         for (const id of this._settingsIds ?? [])
             this._settings.disconnect(id);
