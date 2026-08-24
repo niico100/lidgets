@@ -239,15 +239,23 @@ export class Drawer {
 
         /*
          * Inline, the button folds the widgets sideways into the drawer. Once
-         * folded it points the way the drawer will appear, while a separate
-         * adjacent panel button points back toward the restored widgets.
+         * folded and closed it points the way the drawer will appear. Reverse
+         * it while open so the same button clearly offers the closing action.
+         * A separate adjacent panel button points back toward the restored
+         * widgets.
          */
-        this._toggleIcon.icon_name = this._collapsed
-            ? (this._panelAtBottom() ? 'pan-up-symbolic' : 'pan-down-symbolic')
-            : 'pan-end-symbolic';
-        this._toggle.set_accessible_name(this._collapsed
-            ? _('Show folded Lidgets widgets')
-            : _('Fold Lidgets widgets away'));
+        if (!this._collapsed) {
+            this._toggleIcon.icon_name = 'pan-end-symbolic';
+            this._toggle.set_accessible_name(_('Fold Lidgets widgets away'));
+        } else {
+            const pointsUp = this._panelAtBottom() !== this._open;
+            this._toggleIcon.icon_name = pointsUp
+                ? 'pan-up-symbolic'
+                : 'pan-down-symbolic';
+            this._toggle.set_accessible_name(this._open
+                ? _('Hide folded Lidgets widgets')
+                : _('Show folded Lidgets widgets'));
+        }
 
         // Manual restoration would immediately be undone in automatic modes.
         this._setRestoreVisible(this._collapsed &&
@@ -536,6 +544,7 @@ export class Drawer {
         this._drawer.show();
         this._position();
         this._toggle.add_style_pseudo_class('active');
+        this._updateToggle();
 
         this._capturedEventId = global.stage.connect(
             'captured-event', (actor, event) => this._onCapturedEvent(event));
@@ -554,6 +563,7 @@ export class Drawer {
 
         this._drawer?.hide();
         this._toggle?.remove_style_pseudo_class('active');
+        this._updateToggle();
     }
 
     _position() {
