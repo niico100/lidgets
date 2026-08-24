@@ -1,0 +1,368 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR Panel Hub contributors
+# This file is distributed under the same license as the Panel Hub package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: Panel Hub 1\n"
+"Report-Msgid-Bugs-To: https://github.com/neonshard/panel-hub/issues\n"
+"POT-Creation-Date: 2026-08-24 13:10+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: prefs.js:78
+msgid "Time zone"
+msgstr ""
+
+#: prefs.js:117
+msgid "General"
+msgstr ""
+
+#: prefs.js:122 lib/drawer.js:84
+msgid "Panel Hub"
+msgstr ""
+
+#: prefs.js:123
+msgid "Turn the whole set of widgets on or off, and choose where they sit."
+msgstr ""
+
+#: prefs.js:128
+msgid "Show Panel Hub"
+msgstr ""
+
+#: prefs.js:129
+msgid "Master switch for every widget below"
+msgstr ""
+
+#: prefs.js:135
+msgid "Widgets"
+msgstr ""
+
+#: prefs.js:136
+msgid "Each widget is a separate item in the panel."
+msgstr ""
+
+#: prefs.js:155
+msgid "Placement"
+msgstr ""
+
+#: prefs.js:159
+msgid "Right"
+msgstr ""
+
+#: prefs.js:160
+msgid "Centre"
+msgstr ""
+
+#: prefs.js:161
+msgid "Left"
+msgstr ""
+
+#: prefs.js:169
+msgid "Position"
+msgstr ""
+
+#: prefs.js:170
+msgid "Lower numbers sit further to the left within that area"
+msgstr ""
+
+#: prefs.js:175
+msgid "Folding"
+msgstr ""
+
+#: prefs.js:176
+msgid ""
+"The widgets can fold into a single drawer button to save room in the panel. "
+"They keep running while folded."
+msgstr ""
+
+#: prefs.js:182
+msgid "When I click the button"
+msgstr ""
+
+#: prefs.js:183
+msgid "When they would not fit"
+msgstr ""
+
+#: prefs.js:184
+msgid "When the screen is narrower than a set width"
+msgstr ""
+
+#: prefs.js:185
+msgid "Always"
+msgstr ""
+
+#: prefs.js:186
+msgid "Never"
+msgstr ""
+
+#: prefs.js:191
+msgid "Remembered per monitor"
+msgstr ""
+
+#: prefs.js:192
+msgid ""
+"Fold once on each screen and the choice is restored when you dock or undock. "
+"Use ‹ inside the drawer to unfold."
+msgstr ""
+
+#: prefs.js:201
+msgid "Fold once the widgets exceed"
+msgstr ""
+
+#: prefs.js:202
+msgid ""
+"Percent of the panel width. Measured against the widgets themselves, so it "
+"follows both the screen and how many are on."
+msgstr ""
+
+#: prefs.js:212
+msgid "Collapse below this width"
+msgstr ""
+
+#: prefs.js:213
+msgid "Logical pixels on the monitor holding the panel"
+msgstr ""
+
+#: prefs.js:235 prefs.js:260
+msgid "Clocks"
+msgstr ""
+
+#: prefs.js:239 prefs.js:375 prefs.js:543
+msgid "Display"
+msgstr ""
+
+#: prefs.js:242
+msgid "Show world clocks"
+msgstr ""
+
+#: prefs.js:247
+msgid "24-hour clock"
+msgstr ""
+
+#: prefs.js:248
+msgid "Off shows am/pm"
+msgstr ""
+
+#: prefs.js:253
+msgid "Separator between clocks"
+msgstr ""
+
+#: prefs.js:261
+msgid ""
+"The label is free text, so a flag emoji, a city name, or nothing at all all "
+"work."
+msgstr ""
+
+#: prefs.js:291
+msgid "No clocks"
+msgstr ""
+
+#: prefs.js:292
+msgid "Use + to add one"
+msgstr ""
+
+#: prefs.js:334
+msgid "Label"
+msgstr ""
+
+#: prefs.js:371 lib/weather.js:52
+msgid "Weather"
+msgstr ""
+
+#: prefs.js:378
+msgid "Show weather"
+msgstr ""
+
+#: prefs.js:382
+msgid "Units"
+msgstr ""
+
+#: prefs.js:383
+msgid "Celsius"
+msgstr ""
+
+#: prefs.js:384
+msgid "Fahrenheit"
+msgstr ""
+
+#: prefs.js:388
+msgid "Show the place name in the panel"
+msgstr ""
+
+#: prefs.js:399
+msgid "Refresh every"
+msgstr ""
+
+#: prefs.js:400
+msgid "Minutes between forecast updates"
+msgstr ""
+
+#: prefs.js:407
+msgid "Location"
+msgstr ""
+
+#: prefs.js:408
+msgid ""
+"Type a town or city, then pick it from the list. Your location is never "
+"looked up from your IP address."
+msgstr ""
+
+#: prefs.js:412
+msgid "Using"
+msgstr ""
+
+#: prefs.js:415
+msgid "Search for a place"
+msgstr ""
+
+#: prefs.js:428
+msgid "Not set yet — it will be guessed from your time zone"
+msgstr ""
+
+#: prefs.js:449
+msgid "Could not reach the place lookup service"
+msgstr ""
+
+#: prefs.js:453
+msgid "No matching places"
+msgstr ""
+
+#: prefs.js:539
+msgid "Metrics"
+msgstr ""
+
+#: prefs.js:546
+msgid "Show system metrics"
+msgstr ""
+
+#: prefs.js:551
+msgid "Label each reading"
+msgstr ""
+
+#: prefs.js:552
+msgid "Shows \"CPU 12%\" rather than just \"12%\""
+msgstr ""
+
+#: prefs.js:563
+msgid "Sample every"
+msgstr ""
+
+#: prefs.js:564
+msgid "Seconds between readings"
+msgstr ""
+
+#: prefs.js:572
+msgid "Show in the panel"
+msgstr ""
+
+#: prefs.js:616 lib/sensors.js:98
+msgid "Free space"
+msgstr ""
+
+#: prefs.js:621
+msgid "Report free space on"
+msgstr ""
+
+#: lib/clocks.js:56
+msgid "World Clocks"
+msgstr ""
+
+#: lib/clocks.js:97
+msgid "No clocks configured"
+msgstr ""
+
+#: lib/drawer.js:146
+msgid "Show these in the panel"
+msgstr ""
+
+#: lib/drawer.js:226
+msgid "Panel Hub widgets, folded"
+msgstr ""
+
+#: lib/drawer.js:227
+msgid "Fold Panel Hub widgets away"
+msgstr ""
+
+#: lib/metrics.js:23
+msgid "System Metrics"
+msgstr ""
+
+#: lib/metrics.js:83
+msgid "No sensors detected"
+msgstr ""
+
+#: lib/remote.js:62
+msgid "REMOTE DESKTOP ON"
+msgstr ""
+
+#: lib/sensors.js:90
+msgid "CPU load"
+msgstr ""
+
+#: lib/sensors.js:91
+msgid "CPU temperature"
+msgstr ""
+
+#: lib/sensors.js:92
+msgid "GPU load"
+msgstr ""
+
+#: lib/sensors.js:93
+msgid "GPU clock"
+msgstr ""
+
+#: lib/sensors.js:94
+msgid "GPU temperature"
+msgstr ""
+
+#: lib/sensors.js:95
+msgid "Video memory used"
+msgstr ""
+
+#: lib/sensors.js:96
+msgid "Memory used"
+msgstr ""
+
+#: lib/sensors.js:97
+msgid "Swap used"
+msgstr ""
+
+#: lib/sensors.js:99
+msgid "Network throughput"
+msgstr ""
+
+#: lib/sensors.js:100
+msgid "Fan speed"
+msgstr ""
+
+#: lib/sensors.js:101
+msgid "Battery"
+msgstr ""
+
+#: lib/weather.js:43
+msgid "⚠ Set a weather location"
+msgstr ""
+
+#: lib/weather.js:257
+msgid "Forecast is loading…"
+msgstr ""
+
+#: lib/weather.js:273
+msgid "Weather for"
+msgstr ""
+
+#: lib/weather.js:273
+msgid "unknown location"
+msgstr ""
+
+#: lib/weather.js:279
+msgid "Next 8 hours"
+msgstr ""

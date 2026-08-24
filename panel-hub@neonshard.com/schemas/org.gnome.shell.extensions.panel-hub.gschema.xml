@@ -54,9 +54,17 @@
       <summary>Show world clocks</summary>
     </key>
     <key name="clocks" type="a(ss)">
-      <default>[('🇺🇸 LA','America/Los_Angeles'),('🇬🇧','Europe/London'),('🇹🇭 BKK','Asia/Bangkok')]</default>
+      <default>[]</default>
       <summary>Clocks to display</summary>
-      <description>List of (label, IANA timezone) pairs, in display order.</description>
+      <description>List of (label, IANA timezone) pairs, in display order.
+      Seeded once from the machine's own timezone on first run; a static
+      default cannot do that, hence clocks-seeded below.</description>
+    </key>
+    <key name="clocks-seeded" type="b">
+      <default>false</default>
+      <summary>Whether the first-run clock has been added</summary>
+      <description>Distinguishes "never configured" from "the user removed
+      every clock", so an empty list is not repopulated behind their back.</description>
     </key>
     <key name="clock-24h" type="b">
       <default>true</default>
@@ -72,22 +80,20 @@
       <default>true</default>
       <summary>Show weather</summary>
     </key>
-    <key name="weather-location-mode" type="s">
-      <default>'auto'</default>
-      <summary>Location mode</summary>
-      <description>auto: locate by IP address. manual: use the stored coordinates.</description>
-    </key>
     <key name="weather-latitude" type="d">
       <default>0.0</default>
-      <summary>Latitude used in manual mode</summary>
+      <summary>Latitude of the chosen place</summary>
     </key>
     <key name="weather-longitude" type="d">
       <default>0.0</default>
-      <summary>Longitude used in manual mode</summary>
+      <summary>Longitude of the chosen place</summary>
     </key>
     <key name="weather-city" type="s">
       <default>''</default>
-      <summary>Place name used in manual mode</summary>
+      <summary>Chosen place name</summary>
+      <description>Empty means no location has been chosen yet. On first run
+      the extension guesses one from the machine's timezone; it is never
+      derived from the IP address.</description>
     </key>
     <key name="weather-units" type="s">
       <default>'metric'</default>

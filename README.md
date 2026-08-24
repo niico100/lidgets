@@ -2,7 +2,7 @@
 
 GNOME Shell panel widgets for this machine (Fedora 44, GNOME Shell 50.4, Wayland).
 
-## panel-hub@local
+## panel-hub@neonshard.com
 
 One extension replacing what used to be five separate ones, plus Vitals:
 
@@ -16,12 +16,12 @@ One extension replacing what used to be five separate ones, plus Vitals:
 | `Vitals@CoreCoding.com` | system metrics (third-party) |
 
 Everything is now configurable from the preferences window instead of by
-editing source: `gnome-extensions prefs panel-hub@local`.
+editing source: `gnome-extensions prefs panel-hub@neonshard.com`.
 
 ### Layout
 
 ```
-panel-hub@local/
+panel-hub@neonshard.com/
   extension.js     entry point; builds/tears down widgets from settings
   prefs.js         Adw preferences window (4 pages)
   stylesheet.css
@@ -99,18 +99,49 @@ Not required. It is used where available for extra precision — which monitor
 the panel is on, and which screen edge it occupies — and every reference is
 optional-chained with a plain-GNOME fallback.
 
+### Weather location
+
+Always chosen by the user: type a place, pick it from the live-searched list.
+Nothing looks up the IP address — that used to mean a plaintext `http://`
+request to a third party that answered with the user's city, which is a poor
+default to ship.
+
+On first run the place is guessed from the machine's own IANA timezone, which
+names a city: `Europe/London` → `London`, `America/Argentina/Buenos_Aires` →
+`Buenos Aires`. That name is geocoded like any typed one. If it does not
+resolve (`UTC`, say) the panel asks the user to pick one.
+
+The clock list is seeded the same way, from the same timezone. A GSettings
+default must be a fixed literal, so it cannot be "whatever this machine is set
+to" — hence `clocks-seeded`, which distinguishes "never configured" from "the
+user deleted every clock" so an empty list is not silently repopulated.
+
+### Translations
+
+`gettext-domain` is `panel-hub`; `po/panel-hub.pot` carries 86 strings.
+Regenerate it after changing user-visible text:
+
+```
+xgettext --files-from=po/POTFILES --output=po/panel-hub.pot \
+  --language=JavaScript --from-code=UTF-8 --keyword=_ --keyword=N_
+```
+
+`lib/sensors.js` is imported by the preferences process, which has no access to
+the shell's gettext, so its metric titles are marked with a no-op `N_()` and
+wrapped with `_()` at each display site instead.
+
 ## Development
 
 The extension is symlinked into place:
 
 ```
-~/.local/share/gnome-shell/extensions/panel-hub@local -> this directory
+~/.local/share/gnome-shell/extensions/panel-hub@neonshard.com -> this directory
 ```
 
 After editing the schema, recompile it:
 
 ```
-glib-compile-schemas /home/niico/data/src/lidgets/panel-hub@local/schemas/
+glib-compile-schemas /home/niico/data/src/lidgets/panel-hub@neonshard.com/schemas/
 ```
 
 **Reloading is constrained on this machine.** New extension directories are

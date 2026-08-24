@@ -13,12 +13,14 @@ import GLib from 'gi://GLib';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
+
 import {Sensors, METRIC_DEFS} from './sensors.js';
 
 export const MetricsIndicator = GObject.registerClass(
 class MetricsIndicator extends PanelMenu.Button {
     _init(settings) {
-        super._init(0.0, 'System Metrics', false);
+        super._init(0.0, _('System Metrics'), false);
 
         this._settings = settings;
         this._sensors = new Sensors();
@@ -78,7 +80,7 @@ class MetricsIndicator extends PanelMenu.Button {
 
         if (this._available.length === 0) {
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
-                'No sensors detected', {reactive: false}));
+                _('No sensors detected'), {reactive: false}));
             return;
         }
 
@@ -90,7 +92,7 @@ class MetricsIndicator extends PanelMenu.Button {
 
             const row = new St.BoxLayout({x_expand: true});
             row.add_child(new St.Label({
-                text: def.title,
+                text: _(def.title),
                 x_expand: true,
                 y_align: Clutter.ActorAlign.CENTER,
             }));

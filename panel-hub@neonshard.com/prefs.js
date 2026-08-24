@@ -11,9 +11,17 @@ import Gio from 'gi://Gio';
 import GLib from 'gi://GLib';
 import Soup from 'gi://Soup?version=3.0';
 
-import {ExtensionPreferences} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
+import {ExtensionPreferences, gettext as _}
+    from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 import {Sensors, listMountPoints} from './lib/sensors.js';
+import {geocode, makeJsonFetcher, describePlace} from './lib/geocode.js';
+
+/*
+ * Long enough that ordinary typing produces one request rather than one per
+ * letter, short enough that the list still feels like it follows the keyboard.
+ */
+const SEARCH_DEBOUNCE_MS = 400;
 
 const FALLBACK_TIMEZONES = [
     'UTC', 'Europe/London', 'Europe/Dublin', 'Europe/Paris', 'Europe/Berlin',
@@ -67,7 +75,7 @@ function makeChoiceRow(settings, key, title, subtitle, choices) {
 
 function makeTimezoneRow(timezones, selectedZone, onChanged) {
     const row = new Adw.ComboRow({
-        title: 'Time zone',
+        title: _('Time zone'),
         model: Gtk.StringList.new(timezones),
         enable_search: true,
     });
@@ -106,26 +114,26 @@ export default class PanelHubPreferences extends ExtensionPreferences {
 
     _generalPage(settings) {
         const page = new Adw.PreferencesPage({
-            title: 'General',
+            title: _('General'),
             icon_name: 'preferences-system-symbolic',
         });
 
         const main = new Adw.PreferencesGroup({
-            title: 'Panel Hub',
-            description: 'Turn the whole set of widgets on or off, and choose where they sit.',
+            title: _('Panel Hub'),
+            description: _('Turn the whole set of widgets on or off, and choose where they sit.'),
         });
         page.add(main);
 
         const master = new Adw.SwitchRow({
-            title: 'Show Panel Hub',
-            subtitle: 'Master switch for every widget below',
+            title: _('Show Panel Hub'),
+            subtitle: _('Master switch for every widget below'),
         });
         settings.bind('master-enabled', master, 'active', Gio.SettingsBindFlags.DEFAULT);
         main.add(master);
 
         const widgets = new Adw.PreferencesGroup({
-            title: 'Widgets',
-            description: 'Each widget is a separate item in the panel.',
+            title: _('Widgets'),
+            description: _('Each widget is a separate item in the panel.'),
         });
         page.add(widgets);
 
@@ -144,13 +152,13 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             widgets.add(row);
         }
 
-        const placement = new Adw.PreferencesGroup({title: 'Placement'});
+        const placement = new Adw.PreferencesGroup({title: _('Placement')});
         page.add(placement);
 
         placement.add(makeChoiceRow(settings, 'panel-box', 'Panel area', null, [
-            {label: 'Right', value: 'right'},
-            {label: 'Centre', value: 'center'},
-            {label: 'Left', value: 'left'},
+            {label: _('Right'), value: 'right'},
+            {label: _('Centre'), value: 'center'},
+            {label: _('Left'), value: 'left'},
         ]));
 
         const indexAdjustment = new Gtk.Adjustment({
@@ -158,32 +166,30 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         });
         bindIntAdjustment(settings, 'panel-index', indexAdjustment);
         placement.add(new Adw.SpinRow({
-            title: 'Position',
-            subtitle: 'Lower numbers sit further to the left within that area',
+            title: _('Position'),
+            subtitle: _('Lower numbers sit further to the left within that area'),
             adjustment: indexAdjustment,
         }));
 
         const drawer = new Adw.PreferencesGroup({
-            title: 'Folding',
-            description: 'The widgets can fold into a single drawer button to ' +
-                'save room in the panel. They keep running while folded.',
+            title: _('Folding'),
+            description: _('The widgets can fold into a single drawer button to save room in the panel. They keep running while folded.'),
         });
         page.add(drawer);
 
         const modeRow = makeChoiceRow(settings, 'drawer-mode',
             'Fold the widgets away', null, [
-                {label: 'When I click the button', value: 'manual'},
-                {label: 'When they would not fit', value: 'auto'},
-                {label: 'When the screen is narrower than a set width', value: 'width'},
-                {label: 'Always', value: 'always'},
-                {label: 'Never', value: 'never'},
+                {label: _('When I click the button'), value: 'manual'},
+                {label: _('When they would not fit'), value: 'auto'},
+                {label: _('When the screen is narrower than a set width'), value: 'width'},
+                {label: _('Always'), value: 'always'},
+                {label: _('Never'), value: 'never'},
             ]);
         drawer.add(modeRow);
 
         const manualHint = new Adw.ActionRow({
-            title: 'Remembered per monitor',
-            subtitle: 'Fold once on each screen and the choice is restored when ' +
-                'you dock or undock. Use ‹ inside the drawer to unfold.',
+            title: _('Remembered per monitor'),
+            subtitle: _('Fold once on each screen and the choice is restored when you dock or undock. Use ‹ inside the drawer to unfold.'),
         });
         drawer.add(manualHint);
 
@@ -192,9 +198,8 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         });
         bindIntAdjustment(settings, 'drawer-space-fraction', fractionAdjustment);
         const fractionRow = new Adw.SpinRow({
-            title: 'Fold once the widgets exceed',
-            subtitle: 'Percent of the panel width. Measured against the widgets ' +
-                'themselves, so it follows both the screen and how many are on.',
+            title: _('Fold once the widgets exceed'),
+            subtitle: _('Percent of the panel width. Measured against the widgets themselves, so it follows both the screen and how many are on.'),
             adjustment: fractionAdjustment,
         });
         drawer.add(fractionRow);
@@ -204,8 +209,8 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         });
         bindIntAdjustment(settings, 'drawer-max-width', widthAdjustment);
         const widthRow = new Adw.SpinRow({
-            title: 'Collapse below this width',
-            subtitle: 'Logical pixels on the monitor holding the panel',
+            title: _('Collapse below this width'),
+            subtitle: _('Logical pixels on the monitor holding the panel'),
             adjustment: widthAdjustment,
         });
         drawer.add(widthRow);
@@ -227,34 +232,33 @@ export default class PanelHubPreferences extends ExtensionPreferences {
 
     _clocksPage(settings) {
         const page = new Adw.PreferencesPage({
-            title: 'Clocks',
+            title: _('Clocks'),
             icon_name: 'preferences-system-time-symbolic',
         });
 
-        const options = new Adw.PreferencesGroup({title: 'Display'});
+        const options = new Adw.PreferencesGroup({title: _('Display')});
         page.add(options);
 
-        const enabled = new Adw.SwitchRow({title: 'Show world clocks'});
+        const enabled = new Adw.SwitchRow({title: _('Show world clocks')});
         settings.bind('clocks-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(enabled);
 
         const format = new Adw.SwitchRow({
-            title: '24-hour clock',
-            subtitle: 'Off shows am/pm',
+            title: _('24-hour clock'),
+            subtitle: _('Off shows am/pm'),
         });
         settings.bind('clock-24h', format, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(format);
 
-        const separator = new Adw.EntryRow({title: 'Separator between clocks'});
+        const separator = new Adw.EntryRow({title: _('Separator between clocks')});
         settings.bind('clock-separator', separator, 'text', Gio.SettingsBindFlags.DEFAULT);
         options.add(separator);
 
         const timezones = allTimezones();
 
         const list = new Adw.PreferencesGroup({
-            title: 'Clocks',
-            description: 'The label is free text, so a flag emoji, a city name, ' +
-                'or nothing at all all work.',
+            title: _('Clocks'),
+            description: _('The label is free text, so a flag emoji, a city name, or nothing at all all work.'),
         });
         page.add(list);
 
@@ -284,8 +288,8 @@ export default class PanelHubPreferences extends ExtensionPreferences {
 
             if (clocks.length === 0) {
                 const empty = new Adw.ActionRow({
-                    title: 'No clocks',
-                    subtitle: 'Use + to add one',
+                    title: _('No clocks'),
+                    subtitle: _('Use + to add one'),
                 });
                 list.add(empty);
                 rows.push(empty);
@@ -327,7 +331,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
                 row.add_suffix(down);
                 row.add_suffix(remove);
 
-                const label = new Adw.EntryRow({title: 'Label'});
+                const label = new Adw.EntryRow({title: _('Label')});
                 label.text = clock[0];
                 label.connect('changed', () => {
                     clocks[index][0] = label.text;
@@ -364,24 +368,24 @@ export default class PanelHubPreferences extends ExtensionPreferences {
 
     _weatherPage(settings) {
         const page = new Adw.PreferencesPage({
-            title: 'Weather',
+            title: _('Weather'),
             icon_name: 'weather-few-clouds-symbolic',
         });
 
-        const options = new Adw.PreferencesGroup({title: 'Display'});
+        const options = new Adw.PreferencesGroup({title: _('Display')});
         page.add(options);
 
-        const enabled = new Adw.SwitchRow({title: 'Show weather'});
+        const enabled = new Adw.SwitchRow({title: _('Show weather')});
         settings.bind('weather-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(enabled);
 
-        options.add(makeChoiceRow(settings, 'weather-units', 'Units', null, [
-            {label: 'Celsius', value: 'metric'},
-            {label: 'Fahrenheit', value: 'imperial'},
+        options.add(makeChoiceRow(settings, 'weather-units', _('Units'), null, [
+            {label: _('Celsius'), value: 'metric'},
+            {label: _('Fahrenheit'), value: 'imperial'},
         ]));
 
         const showCity = new Adw.SwitchRow({
-            title: 'Show the place name in the panel',
+            title: _('Show the place name in the panel'),
         });
         settings.bind('weather-show-city', showCity, 'active',
             Gio.SettingsBindFlags.DEFAULT);
@@ -392,90 +396,38 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         });
         bindIntAdjustment(settings, 'weather-refresh-minutes', refreshAdjustment);
         options.add(new Adw.SpinRow({
-            title: 'Refresh every',
-            subtitle: 'Minutes between forecast updates',
+            title: _('Refresh every'),
+            subtitle: _('Minutes between forecast updates'),
             adjustment: refreshAdjustment,
         }));
 
-        const locationGroup = new Adw.PreferencesGroup({title: 'Location'});
+        /* ------------------------------------------------------------ location */
+
+        const locationGroup = new Adw.PreferencesGroup({
+            title: _('Location'),
+            description: _('Type a town or city, then pick it from the list. Your location is never looked up from your IP address.'),
+        });
         page.add(locationGroup);
 
-        const modeRow = makeChoiceRow(settings, 'weather-location-mode',
-            'Find my location', null, [
-                {label: 'Automatically, from my IP address', value: 'auto'},
-                {label: 'Use the place set below', value: 'manual'},
-            ]);
-        locationGroup.add(modeRow);
-
-        const currentRow = new Adw.ActionRow({title: 'Current place'});
+        const currentRow = new Adw.ActionRow({title: _('Using')});
         locationGroup.add(currentRow);
 
-        const latAdjustment = new Gtk.Adjustment({
-            lower: -90, upper: 90, step_increment: 0.01, page_increment: 1,
-        });
-        const lonAdjustment = new Gtk.Adjustment({
-            lower: -180, upper: 180, step_increment: 0.01, page_increment: 1,
-        });
+        const searchRow = new Adw.EntryRow({title: _('Search for a place')});
+        const spinner = new Gtk.Spinner({valign: Gtk.Align.CENTER});
+        searchRow.add_suffix(spinner);
+        locationGroup.add(searchRow);
+
+        const resultsGroup = new Adw.PreferencesGroup();
+        page.add(resultsGroup);
 
         const refreshCurrent = () => {
             const city = settings.get_string('weather-city');
             const lat = settings.get_double('weather-latitude');
             const lon = settings.get_double('weather-longitude');
-            const manual = settings.get_string('weather-location-mode') === 'manual';
-
-            currentRow.subtitle = manual
-                ? `${city || 'Unnamed place'}  ·  ${lat.toFixed(3)}, ${lon.toFixed(3)}`
-                : 'Detected from your IP address each time the forecast refreshes';
-            searchGroup.sensitive = manual;
-            coordsGroup.sensitive = manual;
+            currentRow.subtitle = city === ''
+                ? _('Not set yet — it will be guessed from your time zone')
+                : `${city}  ·  ${lat.toFixed(3)}, ${lon.toFixed(3)}`;
         };
-
-        const searchGroup = new Adw.PreferencesGroup({
-            title: 'Search for a place',
-            description: 'Names are looked up with Open-Meteo’s geocoder.',
-        });
-        page.add(searchGroup);
-
-        const searchRow = new Adw.EntryRow({title: 'Town or city'});
-        const searchButton = new Gtk.Button({
-            icon_name: 'system-search-symbolic',
-            tooltip_text: 'Search',
-            valign: Gtk.Align.CENTER,
-        });
-        searchButton.add_css_class('flat');
-        searchRow.add_suffix(searchButton);
-        searchGroup.add(searchRow);
-
-        const resultsGroup = new Adw.PreferencesGroup();
-        page.add(resultsGroup);
-
-        const coordsGroup = new Adw.PreferencesGroup({
-            title: 'Coordinates',
-            description: 'Set directly if you would rather not search.',
-        });
-        page.add(coordsGroup);
-
-        const nameRow = new Adw.EntryRow({title: 'Place name'});
-        settings.bind('weather-city', nameRow, 'text', Gio.SettingsBindFlags.DEFAULT);
-        coordsGroup.add(nameRow);
-
-        latAdjustment.set_value(settings.get_double('weather-latitude'));
-        latAdjustment.connect('value-changed', () => {
-            settings.set_double('weather-latitude', latAdjustment.get_value());
-            refreshCurrent();
-        });
-        coordsGroup.add(new Adw.SpinRow({
-            title: 'Latitude', adjustment: latAdjustment, digits: 4,
-        }));
-
-        lonAdjustment.set_value(settings.get_double('weather-longitude'));
-        lonAdjustment.connect('value-changed', () => {
-            settings.set_double('weather-longitude', lonAdjustment.get_value());
-            refreshCurrent();
-        });
-        coordsGroup.add(new Adw.SpinRow({
-            title: 'Longitude', adjustment: lonAdjustment, digits: 4,
-        }));
 
         let resultRows = [];
         const clearResults = () => {
@@ -484,31 +436,28 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             resultRows = [];
         };
 
-        const showResults = results => {
+        const addMessage = title => {
+            const row = new Adw.ActionRow({title});
+            resultsGroup.add(row);
+            resultRows.push(row);
+        };
+
+        const showResults = places => {
             clearResults();
 
-            if (results === null) {
-                const row = new Adw.ActionRow({
-                    title: 'Search failed',
-                    subtitle: 'Could not reach the geocoding service',
-                });
-                resultsGroup.add(row);
-                resultRows.push(row);
+            if (places === null) {
+                addMessage(_('Could not reach the place lookup service'));
                 return;
             }
-            if (results.length === 0) {
-                const row = new Adw.ActionRow({title: 'No matches'});
-                resultsGroup.add(row);
-                resultRows.push(row);
+            if (places.length === 0) {
+                addMessage(_('No matching places'));
                 return;
             }
 
-            for (const place of results) {
-                const where = [place.admin1, place.country]
-                    .filter(Boolean).join(', ');
+            for (const place of places) {
                 const row = new Adw.ActionRow({
                     title: place.name,
-                    subtitle: `${where}  ·  ${place.latitude.toFixed(3)}, ${place.longitude.toFixed(3)}`,
+                    subtitle: describePlace(place),
                     activatable: true,
                 });
                 row.add_suffix(new Gtk.Image({
@@ -519,10 +468,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
                     settings.set_double('weather-latitude', place.latitude);
                     settings.set_double('weather-longitude', place.longitude);
                     settings.set_string('weather-city', place.name);
-                    settings.set_string('weather-location-mode', 'manual');
-                    modeRow.selected = 1;
-                    latAdjustment.set_value(place.latitude);
-                    lonAdjustment.set_value(place.longitude);
+                    searchRow.text = '';
                     clearResults();
                     refreshCurrent();
                 });
@@ -532,38 +478,56 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         };
 
         const session = new Soup.Session();
+        const fetchJson = makeJsonFetcher(session, null);
+
+        /*
+         * Search as they type, but only once they pause: a request per
+         * keystroke would be both wasteful and racy, since replies can arrive
+         * out of order and overwrite a newer result with an older one.
+         */
+        let searchTimeoutId = 0;
+        let searchSerial = 0;
+
         const runSearch = () => {
             const query = searchRow.text.trim();
-            if (query === '') {
+            if (query.length < 2) {
                 clearResults();
+                spinner.stop();
                 return;
             }
 
-            const url = 'https://geocoding-api.open-meteo.com/v1/search' +
-                `?name=${encodeURIComponent(query)}&count=8&language=en&format=json`;
-            const message = Soup.Message.new('GET', url);
-            session.send_and_read_async(
-                message, GLib.PRIORITY_DEFAULT, null, (source, result) => {
-                    try {
-                        const bytes = source.send_and_read_finish(result);
-                        if (message.get_status() !== Soup.Status.OK) {
-                            showResults(null);
-                            return;
-                        }
-                        const text = new TextDecoder('utf-8')
-                            .decode(bytes.get_data());
-                        showResults(JSON.parse(text).results ?? []);
-                    } catch {
-                        showResults(null);
-                    }
-                });
+            const serial = ++searchSerial;
+            spinner.start();
+            geocode(fetchJson, query, places => {
+                // A later keystroke already superseded this reply.
+                if (serial !== searchSerial)
+                    return;
+                spinner.stop();
+                showResults(places);
+            });
         };
 
-        searchButton.connect('clicked', runSearch);
-        searchRow.connect('entry-activated', runSearch);
-        modeRow.connect('notify::selected', refreshCurrent);
-        settings.connect('changed::weather-city', refreshCurrent);
+        searchRow.connect('changed', () => {
+            if (searchTimeoutId !== 0)
+                GLib.source_remove(searchTimeoutId);
+            searchTimeoutId = GLib.timeout_add(
+                GLib.PRIORITY_DEFAULT, SEARCH_DEBOUNCE_MS, () => {
+                    searchTimeoutId = 0;
+                    runSearch();
+                    return GLib.SOURCE_REMOVE;
+                });
+        });
 
+        // The window outliving a pending timeout would fire into dead widgets.
+        page.connect('destroy', () => {
+            if (searchTimeoutId !== 0) {
+                GLib.source_remove(searchTimeoutId);
+                searchTimeoutId = 0;
+            }
+            searchSerial++;
+        });
+
+        settings.connect('changed::weather-city', refreshCurrent);
         refreshCurrent();
         return page;
     }
@@ -572,20 +536,20 @@ export default class PanelHubPreferences extends ExtensionPreferences {
 
     _metricsPage(settings) {
         const page = new Adw.PreferencesPage({
-            title: 'Metrics',
+            title: _('Metrics'),
             icon_name: 'utilities-system-monitor-symbolic',
         });
 
-        const options = new Adw.PreferencesGroup({title: 'Display'});
+        const options = new Adw.PreferencesGroup({title: _('Display')});
         page.add(options);
 
-        const enabled = new Adw.SwitchRow({title: 'Show system metrics'});
+        const enabled = new Adw.SwitchRow({title: _('Show system metrics')});
         settings.bind('metrics-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(enabled);
 
         const labels = new Adw.SwitchRow({
-            title: 'Label each reading',
-            subtitle: 'Shows "CPU 12%" rather than just "12%"',
+            title: _('Label each reading'),
+            subtitle: _('Shows "CPU 12%" rather than just "12%"'),
         });
         settings.bind('metrics-show-labels', labels, 'active',
             Gio.SettingsBindFlags.DEFAULT);
@@ -596,8 +560,8 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         });
         bindIntAdjustment(settings, 'metrics-refresh-seconds', refreshAdjustment);
         options.add(new Adw.SpinRow({
-            title: 'Sample every',
-            subtitle: 'Seconds between readings',
+            title: _('Sample every'),
+            subtitle: _('Seconds between readings'),
             adjustment: refreshAdjustment,
         }));
 
@@ -605,10 +569,9 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         const available = sensors.available();
 
         const group = new Adw.PreferencesGroup({
-            title: 'Show in the panel',
+            title: _('Show in the panel'),
             description: `Detected ${available.length} sensors on this machine. ` +
-                'Everything is listed in the widget’s dropdown either way — ' +
-                'these switches only choose what is shown inline.',
+                'Everything is listed in the widget’s dropdown either way — these switches only choose what is shown inline.',
         });
         page.add(group);
 
@@ -650,12 +613,12 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         });
         page.connect('destroy', () => GLib.source_remove(previewId));
 
-        const diskGroup = new Adw.PreferencesGroup({title: 'Free space'});
+        const diskGroup = new Adw.PreferencesGroup({title: _('Free space')});
         page.add(diskGroup);
 
         const mounts = listMountPoints();
         const mountRow = new Adw.ComboRow({
-            title: 'Report free space on',
+            title: _('Report free space on'),
             model: Gtk.StringList.new(mounts),
         });
         const currentMount = mounts.indexOf(settings.get_string('metrics-disk-mount'));

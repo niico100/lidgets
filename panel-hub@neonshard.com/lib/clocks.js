@@ -9,6 +9,7 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 function formatTime(timeZone, use24h) {
     try {
@@ -52,7 +53,7 @@ function formatOffset(timeZone) {
 export const ClocksIndicator = GObject.registerClass(
 class ClocksIndicator extends PanelMenu.Button {
     _init(settings) {
-        super._init(0.0, 'World Clocks', false);
+        super._init(0.0, _('World Clocks'), false);
 
         this._settings = settings;
         this._tickId = 0;
@@ -93,7 +94,7 @@ class ClocksIndicator extends PanelMenu.Button {
 
         if (clocks.length === 0) {
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
-                'No clocks configured', {reactive: false}));
+                _('No clocks configured'), {reactive: false}));
             return;
         }
 

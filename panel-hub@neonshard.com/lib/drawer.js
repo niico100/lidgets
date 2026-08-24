@@ -11,6 +11,7 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const DRAWER_GAP = 6;
 const SCREEN_EDGE_MARGIN = 8;
@@ -80,7 +81,7 @@ export class Drawer {
     /* ---------------------------------------------------------------- setup */
 
     _buildToggle() {
-        this._toggle = new PanelMenu.Button(0.0, 'Panel Hub', true);
+        this._toggle = new PanelMenu.Button(0.0, _('Panel Hub'), true);
         this._toggleIcon = new St.Icon({
             icon_name: 'pan-end-symbolic',
             style_class: 'system-status-icon',
@@ -142,7 +143,7 @@ export class Drawer {
             y_align: Clutter.ActorAlign.CENTER,
             can_focus: true,
         });
-        this._expandButton.set_accessible_name('Show these in the panel');
+        this._expandButton.set_accessible_name(_('Show these in the panel'));
         this._expandButton.connect('clicked', () => {
             this.close();
             this._setManualCollapsed(false);
@@ -222,8 +223,8 @@ export class Drawer {
             ? 'pan-start-symbolic'
             : 'pan-end-symbolic';
         this._toggle.set_accessible_name(this._collapsed
-            ? 'Panel Hub widgets, folded'
-            : 'Fold Panel Hub widgets away');
+            ? _('Panel Hub widgets, folded')
+            : _('Fold Panel Hub widgets away'));
 
         // Unfolding from inside the drawer only makes sense when the user is
         // the one deciding; in the automatic modes it would be undone at once.

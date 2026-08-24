@@ -1,8 +1,11 @@
 /*
  * Weather from Open-Meteo, with an 8-hour temperature and rain dropdown.
  *
- * Location is either a fixed coordinate from prefs, or resolved from the
- * public IP with a chain of fallbacks for networks that block the first one.
+ * The location is always one the user picked in preferences. Nothing here
+ * looks up the IP address: that used to mean a plaintext request to a third
+ * party that answered with the user's city, which is a poor default to ship.
+ * On first run the place is guessed from the machine's own timezone instead,
+ * which needs no network round trip to learn anything about the user.
  */
 
 import GObject from 'gi://GObject';
@@ -13,8 +16,10 @@ import Gio from 'gi://Gio';
 import Soup from 'gi://Soup?version=3.0';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-const LOCATION_REFRESH_SECONDS = 6 * 60 * 60;
+import {geocode} from './geocode.js';
+
 
 // WMO weather code -> symbol, per https://open-meteo.com/en/docs
 const WMO_SYMBOLS = {
@@ -34,6 +39,9 @@ const WMO_SYMBOLS = {
     95: '⛈️', 96: '⛈️', 99: '⛈️',
 };
 
+// Resolved lazily: at module scope the gettext domain is not bound yet.
+const noLocationText = () => _('\u26a0 Set a weather location');
+
 function symbolFor(code) {
     return WMO_SYMBOLS[code] ?? '❓';
 }
@@ -41,19 +49,19 @@ function symbolFor(code) {
 export const WeatherIndicator = GObject.registerClass(
 class WeatherIndicator extends PanelMenu.Button {
     _init(settings) {
-        super._init(0.0, 'Weather', false);
+        super._init(0.0, _('Weather'), false);
 
         this._settings = settings;
         this._weatherTimeoutId = 0;
-        this._locationTimeoutId = 0;
         this._reloadId = 0;
         this._lat = null;
         this._lon = null;
         this._city = null;
         this._forecast = null;
+        this._seeding = false;
 
         this._label = new St.Label({
-            text: '⏳ loading weather…',
+            text: '⏳ …',
             y_align: Clutter.ActorAlign.CENTER,
             style_class: 'panel-hub-label',
         });
@@ -67,7 +75,7 @@ class WeatherIndicator extends PanelMenu.Button {
          * so it has to re-resolve; the display-only keys just re-render.
          */
         this._settingsIds = [
-            ...['weather-location-mode', 'weather-latitude', 'weather-longitude',
+            ...['weather-latitude', 'weather-longitude',
                 'weather-city', 'weather-units'].map(
                 key => settings.connect(`changed::${key}`, () => this._reload())),
             settings.connect('changed::weather-show-city', () => this._render()),
@@ -80,13 +88,6 @@ class WeatherIndicator extends PanelMenu.Button {
         this._buildMenu();
         this._doReload();
         this._restartWeatherTimer();
-
-        this._locationTimeoutId = GLib.timeout_add_seconds(
-            GLib.PRIORITY_DEFAULT, LOCATION_REFRESH_SECONDS, () => {
-                if (this._settings.get_string('weather-location-mode') === 'auto')
-                    this._reload();
-                return GLib.SOURCE_CONTINUE;
-            });
     }
 
     _restartWeatherTimer() {
@@ -121,80 +122,65 @@ class WeatherIndicator extends PanelMenu.Button {
     _doReload() {
         this._forecast = null;
 
-        if (this._settings.get_string('weather-location-mode') === 'manual') {
-            this._lat = this._settings.get_double('weather-latitude');
-            this._lon = this._settings.get_double('weather-longitude');
-            this._city = this._settings.get_string('weather-city') || null;
-            this._fetchWeather();
+        const city = this._settings.get_string('weather-city');
+        if (city === '') {
+            this._seedFromTimezone();
             return;
         }
 
-        this._lat = null;
-        this._lon = null;
-        this._city = null;
-        this._locateThenFetch();
-    }
-
-    /* ----------------------------------------------------------------- http */
-
-    _fetchJson(url, onDone) {
-        const message = Soup.Message.new('GET', url);
-        this._session.send_and_read_async(
-            message, GLib.PRIORITY_DEFAULT, this._cancellable,
-            (session, result) => {
-                try {
-                    const bytes = session.send_and_read_finish(result);
-                    if (message.get_status() !== Soup.Status.OK) {
-                        onDone(null);
-                        return;
-                    }
-                    const text = new TextDecoder('utf-8').decode(bytes.get_data());
-                    onDone(JSON.parse(text));
-                } catch {
-                    onDone(null);
-                }
-            });
-    }
-
-    _locateThenFetch() {
-        // Primary: ip-api.com (no key, generous rate limit, http only on free tier)
-        this._fetchJson('http://ip-api.com/json/', data => {
-            if (data && data.status === 'success' && data.lat !== undefined) {
-                this._setLocation(data.lat, data.lon, data.city || data.regionName);
-                return;
-            }
-            // HTTPS fallback for networks where the free ip-api endpoint is blocked.
-            this._fetchJson('https://ipwho.is/', secure => {
-                if (secure && secure.success && secure.latitude !== undefined) {
-                    this._setLocation(secure.latitude, secure.longitude,
-                        secure.city || secure.region);
-                    return;
-                }
-                this._fetchJson('https://geolocation-db.com/json/', fallback => {
-                    if (fallback && fallback.latitude !== undefined &&
-                        fallback.latitude !== -1) {
-                        this._setLocation(fallback.latitude, fallback.longitude,
-                            fallback.city || fallback.region);
-                    } else if (!this._forecast) {
-                        this._label.text = '📍 location unavailable';
-                    }
-                });
-            });
-        });
-    }
-
-    _setLocation(lat, lon, city) {
-        this._lat = lat;
-        this._lon = lon;
-        this._city = city || null;
+        this._lat = this._settings.get_double('weather-latitude');
+        this._lon = this._settings.get_double('weather-longitude');
+        this._city = city;
         this._fetchWeather();
     }
 
-    _fetchWeather() {
-        if (this._lat === null || this._lon === null) {
-            this._locateThenFetch();
+    /*
+     * A first guess with no network lookup of who the user is: the IANA zone
+     * the machine is already set to names a city, so "Europe/London" becomes
+     * "London" and "America/Argentina/Buenos_Aires" becomes "Buenos Aires".
+     * That name is geocoded like any the user could have typed. If it does not
+     * resolve -- "UTC", say -- the panel simply asks them to pick one.
+     */
+    _seedFromTimezone() {
+        if (this._seeding)
+            return;
+
+        let zone;
+        try {
+            zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        } catch {
+            zone = null;
+        }
+
+        const guess = zone ? zone.split('/').pop().replace(/_/g, ' ') : '';
+        if (guess === '' || guess === 'UTC') {
+            this._label.text = noLocationText();
             return;
         }
+
+        this._seeding = true;
+        this._label.text = '\u23f3 …';
+        geocode(this._fetchJson.bind(this), guess, places => {
+            this._seeding = false;
+            const place = places?.[0];
+            if (!place) {
+                this._label.text = noLocationText();
+                return;
+            }
+            /*
+             * Writing these back fires changed::, which reloads through the
+             * normal path -- so the seeded place behaves exactly like one
+             * chosen by hand, and is visible in preferences as such.
+             */
+            this._settings.set_double('weather-latitude', place.latitude);
+            this._settings.set_double('weather-longitude', place.longitude);
+            this._settings.set_string('weather-city', place.name);
+        });
+    }
+
+    _fetchWeather() {
+        if (this._lat === null || this._lon === null)
+            return;
 
         const imperial = this._settings.get_string('weather-units') === 'imperial';
 
@@ -268,7 +254,7 @@ class WeatherIndicator extends PanelMenu.Button {
         const data = this._forecast;
         if (!data) {
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
-                'Forecast is loading…', {reactive: false}));
+                _('Forecast is loading…'), {reactive: false}));
             return;
         }
 
@@ -284,13 +270,13 @@ class WeatherIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(heading);
 
         const location = new PopupMenu.PopupMenuItem(
-            `Weather for ${this._city || 'unknown location'}`,
+            `${_('Weather for')} ${this._city || _('unknown location')}`,
             {reactive: false, can_focus: false});
         location.label.add_style_class_name('panel-hub-dim');
         location.label.opacity = 160;
         this.menu.addMenuItem(location);
 
-        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem('Next 8 hours'));
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(_('Next 8 hours')));
 
         const forecastBox = new St.BoxLayout({
             orientation: Clutter.Orientation.VERTICAL,
@@ -337,13 +323,11 @@ class WeatherIndicator extends PanelMenu.Button {
     }
 
     _onDestroy() {
-        for (const id of [this._weatherTimeoutId, this._locationTimeoutId,
-            this._reloadId]) {
+        for (const id of [this._weatherTimeoutId, this._reloadId]) {
             if (id !== 0)
                 GLib.source_remove(id);
         }
         this._weatherTimeoutId = 0;
-        this._locationTimeoutId = 0;
         this._reloadId = 0;
 
         this._cancellable?.cancel();

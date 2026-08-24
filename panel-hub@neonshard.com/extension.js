@@ -6,6 +6,8 @@
  * button when the panel runs out of room.
  */
 
+import GLib from 'gi://GLib';
+
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
@@ -42,6 +44,8 @@ export default class PanelHubExtension extends Extension {
         this._drawer = null;
         this._remote = null;
 
+        this._seedClocks();
+
         this._settingsIds = STRUCTURAL_KEYS.map(
             key => this._settings.connect(`changed::${key}`, () => this._rebuild()));
 
@@ -55,6 +59,35 @@ export default class PanelHubExtension extends Extension {
             this._settings.disconnect(id);
         this._settingsIds = [];
         this._settings = null;
+    }
+
+    /*
+     * A GSettings default has to be a fixed literal, so it cannot be "whatever
+     * time zone this machine is set to". Seed that once on first run instead.
+     *
+     * The separate seeded flag is what distinguishes "never configured" from
+     * "the user deleted every clock" -- without it, removing the last clock
+     * would silently bring one back on the next login.
+     */
+    _seedClocks() {
+        if (this._settings.get_boolean('clocks-seeded'))
+            return;
+
+        let zone;
+        try {
+            zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        } catch {
+            zone = null;
+        }
+
+        if (zone) {
+            // "America/Los_Angeles" -> "Los Angeles"
+            const label = zone.split('/').pop().replace(/_/g, ' ');
+            this._settings.set_value('clocks',
+                new GLib.Variant('a(ss)', [[label, zone]]));
+        }
+
+        this._settings.set_boolean('clocks-seeded', true);
     }
 
     _rebuild() {

@@ -10,6 +10,7 @@ import St from 'gi://St';
 import Clutter from 'gi://Clutter';
 import Gio from 'gi://Gio';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
+import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 const SCHEMAS = [
     'org.gnome.desktop.remote-desktop.rdp',
@@ -58,7 +59,7 @@ export class RemoteBanner {
             style: 'margin-right: 5px;',
         }));
         indicator.add_child(new St.Label({
-            text: 'REMOTE DESKTOP ON',
+            text: _('REMOTE DESKTOP ON'),
             y_align: Clutter.ActorAlign.CENTER,
         }));
         return indicator;

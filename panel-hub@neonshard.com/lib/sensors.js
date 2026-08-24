@@ -75,23 +75,30 @@ function formatRate(bytesPerSecond) {
 }
 
 /*
+ * A no-op marker so xgettext collects these titles. They cannot be translated
+ * here: this module is imported by the preferences process too, which has no
+ * access to the shell's gettext. Callers wrap them with _() at display time.
+ */
+const N_ = text => text;
+
+/*
  * Every metric the widget knows about. `id` is what lands in the
  * metrics-show setting, `name` is the prefix shown in the panel, and `title`
  * is the longer form used in the dropdown and in prefs.
  */
 export const METRIC_DEFS = [
-    {id: 'cpu', name: 'CPU', title: 'CPU load'},
-    {id: 'cpu-temp', name: 'CPU', title: 'CPU temperature'},
-    {id: 'gpu', name: 'GPU', title: 'GPU load'},
-    {id: 'gpu-freq', name: 'GPU', title: 'GPU clock'},
-    {id: 'gpu-temp', name: 'GPU', title: 'GPU temperature'},
-    {id: 'vram', name: 'VRAM', title: 'Video memory used'},
-    {id: 'ram', name: 'RAM', title: 'Memory used'},
-    {id: 'swap', name: 'SWAP', title: 'Swap used'},
-    {id: 'disk', name: 'DISK', title: 'Free space'},
-    {id: 'net', name: 'NET', title: 'Network throughput'},
-    {id: 'fan', name: 'FAN', title: 'Fan speed'},
-    {id: 'battery', name: 'BAT', title: 'Battery'},
+    {id: 'cpu', name: 'CPU', title: N_('CPU load')},
+    {id: 'cpu-temp', name: 'CPU', title: N_('CPU temperature')},
+    {id: 'gpu', name: 'GPU', title: N_('GPU load')},
+    {id: 'gpu-freq', name: 'GPU', title: N_('GPU clock')},
+    {id: 'gpu-temp', name: 'GPU', title: N_('GPU temperature')},
+    {id: 'vram', name: 'VRAM', title: N_('Video memory used')},
+    {id: 'ram', name: 'RAM', title: N_('Memory used')},
+    {id: 'swap', name: 'SWAP', title: N_('Swap used')},
+    {id: 'disk', name: 'DISK', title: N_('Free space')},
+    {id: 'net', name: 'NET', title: N_('Network throughput')},
+    {id: 'fan', name: 'FAN', title: N_('Fan speed')},
+    {id: 'battery', name: 'BAT', title: N_('Battery')},
 ];
 
 export class Sensors {
