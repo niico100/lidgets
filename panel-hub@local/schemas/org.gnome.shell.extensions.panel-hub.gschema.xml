@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.panel-hub"
+          path="/org/gnome/shell/extensions/panel-hub/">
+
+    <!-- Global -->
+    <key name="master-enabled" type="b">
+      <default>true</default>
+      <summary>Show Panel Hub</summary>
+      <description>Master switch. When off, every widget is removed from the panel.</description>
+    </key>
+    <key name="panel-box" type="s">
+      <default>'right'</default>
+      <summary>Panel box</summary>
+      <description>Which side of the panel the widgets sit in: left, center or right.</description>
+    </key>
+    <key name="panel-index" type="i">
+      <default>0</default>
+      <range min="0" max="20"/>
+      <summary>Position within the panel box</summary>
+    </key>
+
+    <!-- Drawer -->
+    <key name="drawer-mode" type="s">
+      <default>'auto'</default>
+      <summary>Drawer mode</summary>
+      <description>auto: collapse into a drawer when the panel monitor is narrow. always: always collapse. never: always inline.</description>
+    </key>
+    <key name="drawer-max-width" type="i">
+      <default>1920</default>
+      <range min="640" max="7680"/>
+      <summary>Collapse below this monitor width</summary>
+      <description>Logical pixels. Used only when drawer-mode is auto.</description>
+    </key>
+
+    <!-- Clocks -->
+    <key name="clocks-enabled" type="b">
+      <default>true</default>
+      <summary>Show world clocks</summary>
+    </key>
+    <key name="clocks" type="a(ss)">
+      <default>[('🇺🇸 LA','America/Los_Angeles'),('🇬🇧','Europe/London'),('🇹🇭 BKK','Asia/Bangkok')]</default>
+      <summary>Clocks to display</summary>
+      <description>List of (label, IANA timezone) pairs, in display order.</description>
+    </key>
+    <key name="clock-24h" type="b">
+      <default>true</default>
+      <summary>Use a 24-hour clock</summary>
+    </key>
+    <key name="clock-separator" type="s">
+      <default>'  ·  '</default>
+      <summary>Separator drawn between clocks</summary>
+    </key>
+
+    <!-- Weather -->
+    <key name="weather-enabled" type="b">
+      <default>true</default>
+      <summary>Show weather</summary>
+    </key>
+    <key name="weather-location-mode" type="s">
+      <default>'auto'</default>
+      <summary>Location mode</summary>
+      <description>auto: locate by IP address. manual: use the stored coordinates.</description>
+    </key>
+    <key name="weather-latitude" type="d">
+      <default>0.0</default>
+      <summary>Latitude used in manual mode</summary>
+    </key>
+    <key name="weather-longitude" type="d">
+      <default>0.0</default>
+      <summary>Longitude used in manual mode</summary>
+    </key>
+    <key name="weather-city" type="s">
+      <default>''</default>
+      <summary>Place name used in manual mode</summary>
+    </key>
+    <key name="weather-units" type="s">
+      <default>'metric'</default>
+      <summary>Units</summary>
+      <description>metric: Celsius and km/h. imperial: Fahrenheit and mph.</description>
+    </key>
+    <key name="weather-show-city" type="b">
+      <default>true</default>
+      <summary>Show the place name in the panel</summary>
+    </key>
+    <key name="weather-refresh-minutes" type="i">
+      <default>30</default>
+      <range min="5" max="360"/>
+      <summary>Minutes between forecast refreshes</summary>
+    </key>
+
+    <!-- Metrics -->
+    <key name="metrics-enabled" type="b">
+      <default>true</default>
+      <summary>Show system metrics</summary>
+    </key>
+    <key name="metrics-show" type="as">
+      <default>['cpu','ram','disk']</default>
+      <summary>Metrics shown in the panel</summary>
+      <description>Ordered list of metric ids. Unavailable ids are ignored.</description>
+    </key>
+    <key name="metrics-show-labels" type="b">
+      <default>true</default>
+      <summary>Prefix each metric with its name</summary>
+    </key>
+    <key name="metrics-disk-mount" type="s">
+      <default>'/'</default>
+      <summary>Mount point reported by the disk metric</summary>
+    </key>
+    <key name="metrics-refresh-seconds" type="i">
+      <default>3</default>
+      <range min="1" max="60"/>
+      <summary>Seconds between metric samples</summary>
+    </key>
+
+    <!-- Remote desktop banner -->
+    <key name="remote-enabled" type="b">
+      <default>true</default>
+      <summary>Show a banner while remote desktop is enabled</summary>
+    </key>
+  </schema>
+</schemalist>

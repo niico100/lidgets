@@ -1,0 +1,51 @@
+/* Panel text for every Panel Hub widget. */
+.panel-hub-label {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+/*
+ * Secondary lines inside the dropdowns. The dimming is done with actor
+ * opacity from JS rather than a colour here, so it works against whatever
+ * foreground the light or dark shell theme supplies.
+ */
+.panel-hub-dim {
+    font-size: 0.9em;
+}
+
+/*
+ * The drawer borrows popup-menu-content from the shell theme for its
+ * background and border, so it tracks light/dark automatically. These rules
+ * only add the padding and spacing that a horizontal strip of indicators
+ * needs -- popup-menu-content is tuned for a vertical list of menu items.
+ */
+.panel-hub-drawer {
+    padding: 4px 8px;
+}
+
+.panel-hub-drawer-box {
+    spacing: 10px;
+}
+
+/*
+ * Collapsed indicators are still panel buttons, so they ask the theme for the
+ * full panel height. Inside the drawer that leaves a lot of dead space, so
+ * pull it back to something proportionate. The class is applied from JS on
+ * collapse and removed on restore, which is more reliable than matching St
+ * type names with a selector.
+ */
+.panel-hub-drawer-item {
+    height: 32px;
+    min-height: 32px;
+    padding: 0 6px;
+}
+
+/* Deliberately loud -- this warns that the machine is reachable remotely. */
+.panel-hub-remote-banner {
+    background-color: #c01c28;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    margin: 3px 5px;
+    padding: 2px 9px;
+}
