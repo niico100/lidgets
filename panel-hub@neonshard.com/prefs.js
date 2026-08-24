@@ -285,15 +285,30 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             title: _('Show separator between clocks'),
             subtitle: _('Off keeps spacing without punctuation'),
         });
-        settings.bind('clock-show-separator', showSeparator, 'active',
-            Gio.SettingsBindFlags.DEFAULT);
+        showSeparator.active = settings.get_string('clock-separator').trim() !== '';
         options.add(showSeparator);
 
         const separator = new Adw.EntryRow({title: _('Separator')});
         settings.bind('clock-separator', separator, 'text', Gio.SettingsBindFlags.DEFAULT);
-        settings.bind('clock-show-separator', separator, 'sensitive',
-            Gio.SettingsBindFlags.GET);
+        separator.sensitive = showSeparator.active;
         options.add(separator);
+
+        let syncingSeparator = false;
+        const syncSeparator = () => {
+            syncingSeparator = true;
+            showSeparator.active = settings.get_string('clock-separator').trim() !== '';
+            separator.sensitive = showSeparator.active;
+            syncingSeparator = false;
+        };
+        showSeparator.connect('notify::active', () => {
+            if (syncingSeparator)
+                return;
+            settings.set_string('clock-separator',
+                showSeparator.active ? '  ·  ' : '   ');
+        });
+        const separatorChangedId = settings.connect(
+            'changed::clock-separator', syncSeparator);
+        page.connect('destroy', () => settings.disconnect(separatorChangedId));
 
         const timezones = allTimezones();
 

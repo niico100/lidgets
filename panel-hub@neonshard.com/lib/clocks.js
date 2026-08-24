@@ -64,9 +64,7 @@ class ClocksIndicator extends PanelMenu.Button {
         });
         this.add_child(this._label);
 
-        this._settingsIds = [
-            'clocks', 'clock-24h', 'clock-show-separator', 'clock-separator',
-        ].map(
+        this._settingsIds = ['clocks', 'clock-24h', 'clock-separator'].map(
             key => settings.connect(`changed::${key}`, () => this._refresh()));
 
         this.connect('destroy', () => this._onDestroy());
@@ -81,9 +79,7 @@ class ClocksIndicator extends PanelMenu.Button {
 
     _refresh() {
         const use24h = this._settings.get_boolean('clock-24h');
-        const separator = this._settings.get_boolean('clock-show-separator')
-            ? this._settings.get_string('clock-separator')
-            : '   ';
+        const separator = this._settings.get_string('clock-separator');
         const clocks = this._clocks();
 
         this._label.text = clocks

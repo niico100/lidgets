@@ -70,11 +70,6 @@
       <default>true</default>
       <summary>Use a 24-hour clock</summary>
     </key>
-    <key name="clock-show-separator" type="b">
-      <default>true</default>
-      <summary>Show a visible separator between clocks</summary>
-      <description>When false, clocks retain spacing but no separator punctuation is drawn.</description>
-    </key>
     <key name="clock-separator" type="s">
       <default>'  ·  '</default>
       <summary>Separator drawn between clocks</summary>
