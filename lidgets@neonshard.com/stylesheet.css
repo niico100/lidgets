@@ -1,21 +1,21 @@
-/* Panel text for every Panel Hub widget. */
-.panel-hub-label {
+/* Panel text for every Lidgets widget. */
+.lidgets-label {
     padding-left: 10px;
     padding-right: 10px;
 }
 
 /* Compact icon/value pairs used by the system metrics panel widget. */
-.panel-hub-metrics {
+.lidgets-metrics {
     padding-left: 10px;
     padding-right: 10px;
     spacing: 18px;
 }
 
-.panel-hub-metric {
+.lidgets-metric {
     spacing: 5px;
 }
 
-.panel-hub-metric-icon {
+.lidgets-metric-icon {
     icon-size: 16px;
 }
 
@@ -24,7 +24,7 @@
  * opacity from JS rather than a colour here, so it works against whatever
  * foreground the light or dark shell theme supplies.
  */
-.panel-hub-dim {
+.lidgets-dim {
     font-size: 0.9em;
 }
 
@@ -34,11 +34,11 @@
  * only add the padding and spacing that a horizontal strip of indicators
  * needs -- popup-menu-content is tuned for a vertical list of menu items.
  */
-.panel-hub-drawer {
+.lidgets-drawer {
     padding: 4px 8px;
 }
 
-.panel-hub-drawer-box {
+.lidgets-drawer-box {
     spacing: 10px;
 }
 
@@ -53,13 +53,13 @@
  * measuring these same actors, so anything that changed their width here
  * would change the answer depending on which state they were already in.
  */
-.panel-hub-drawer-item {
+.lidgets-drawer-item {
     height: 32px;
     min-height: 32px;
 }
 
 /* Deliberately loud -- this warns that the machine is reachable remotely. */
-.panel-hub-remote-banner {
+.lidgets-remote-banner {
     background-color: #c01c28;
     border-radius: 6px;
     color: white;

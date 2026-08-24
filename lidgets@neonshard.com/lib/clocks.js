@@ -71,7 +71,7 @@ class ClocksIndicator extends PanelMenu.Button {
 
         this._label = new St.Label({
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: 'panel-hub-label',
+            style_class: 'lidgets-label',
         });
         this.add_child(this._label);
 
@@ -158,7 +158,7 @@ class ClocksIndicator extends PanelMenu.Button {
             }));
             box.add_child(new St.Label({
                 text: `${formatDate(zone)}  ·  ${zone}  ${formatOffset(zone)}`,
-                style_class: 'panel-hub-dim',
+                style_class: 'lidgets-dim',
                 // Relative to the theme's own colour, so light themes work too.
                 opacity: 160,
             }));

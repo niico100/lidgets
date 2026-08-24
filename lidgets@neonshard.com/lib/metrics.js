@@ -35,7 +35,7 @@ class MetricsIndicator extends PanelMenu.Button {
 
         this._panelBox = new St.BoxLayout({
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: 'panel-hub-metrics',
+            style_class: 'lidgets-metrics',
         });
         this.add_child(this._panelBox);
 
@@ -85,7 +85,7 @@ class MetricsIndicator extends PanelMenu.Button {
 
             const metric = new St.BoxLayout({
                 y_align: Clutter.ActorAlign.CENTER,
-                style_class: 'panel-hub-metric',
+                style_class: 'lidgets-metric',
             });
 
             if (useSymbols) {
@@ -95,7 +95,7 @@ class MetricsIndicator extends PanelMenu.Button {
                     gicon: new Gio.FileIcon({file: iconFile}),
                     icon_size: 16,
                     y_align: Clutter.ActorAlign.CENTER,
-                    style_class: 'system-status-icon panel-hub-metric-icon',
+                    style_class: 'system-status-icon lidgets-metric-icon',
                 }));
             }
 

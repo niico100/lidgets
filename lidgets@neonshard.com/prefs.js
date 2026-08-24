@@ -1,5 +1,5 @@
 /*
- * Panel Hub preferences.
+ * Lidgets preferences.
  *
  * The metrics page is built from the sensors this machine actually exposes,
  * so it never offers a switch for a reading that would only ever show "--".

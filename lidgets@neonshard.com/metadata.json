@@ -1,11 +1,11 @@
 {
-  "uuid": "panel-hub@neonshard.com",
+  "uuid": "lidgets@neonshard.com",
   "name": "Lidgets",
   "description": "World clocks, weather and system metrics in one configurable panel widget, with a drawer that folds them away when the panel is short of room.",
   "shell-version": [
     "50"
   ],
-  "settings-schema": "org.gnome.shell.extensions.panel-hub",
-  "gettext-domain": "panel-hub",
+  "settings-schema": "org.gnome.shell.extensions.lidgets",
+  "gettext-domain": "lidgets",
   "url": "https://github.com/niico100/lidgets"
 }

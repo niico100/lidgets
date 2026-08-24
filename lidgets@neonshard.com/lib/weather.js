@@ -63,7 +63,7 @@ class WeatherIndicator extends PanelMenu.Button {
         this._label = new St.Label({
             text: '⏳ …',
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: 'panel-hub-label',
+            style_class: 'lidgets-label',
         });
         this.add_child(this._label);
 
@@ -267,7 +267,7 @@ class WeatherIndicator extends PanelMenu.Button {
         const location = new PopupMenu.PopupMenuItem(
             `${_('Weather for')} ${this._city || _('unknown location')}`,
             {reactive: false, can_focus: false});
-        location.label.add_style_class_name('panel-hub-dim');
+        location.label.add_style_class_name('lidgets-dim');
         location.label.opacity = 160;
         this.menu.addMenuItem(location);
 

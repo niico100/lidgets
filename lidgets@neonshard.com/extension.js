@@ -1,5 +1,5 @@
 /*
- * Panel Hub -- world clocks, weather and system metrics in one extension.
+ * Lidgets -- world clocks, weather and system metrics in one extension.
  *
  * Each widget is an independent panel indicator so it can be toggled, ordered
  * and collapsed on its own. The drawer folds whichever ones exist into a single
@@ -22,9 +22,22 @@ import {Drawer} from './lib/drawer.js';
  * slot in Main.panel.statusArea, so it has to be stable and unique.
  */
 const WIDGETS = [
-    {key: 'clocks-enabled', role: 'panel-hub-clocks', ctor: ClocksIndicator},
-    {key: 'weather-enabled', role: 'panel-hub-weather', ctor: WeatherIndicator},
-    {key: 'metrics-enabled', role: 'panel-hub-metrics', ctor: MetricsIndicator},
+    {key: 'clocks-enabled', role: 'lidgets-clocks', ctor: ClocksIndicator},
+    {key: 'weather-enabled', role: 'lidgets-weather', ctor: WeatherIndicator},
+    {key: 'metrics-enabled', role: 'lidgets-metrics', ctor: MetricsIndicator},
+];
+
+const LEGACY_SCHEMA = 'org.gnome.shell.extensions.panel-hub';
+const SETTINGS_MIGRATION_VERSION = 1;
+const MIGRATED_KEYS = [
+    'master-enabled', 'panel-box', 'panel-index',
+    'drawer-mode', 'drawer-collapsed-per-monitor', 'drawer-space-fraction',
+    'drawer-max-width', 'clocks-enabled', 'clocks', 'clocks-seeded',
+    'clock-24h', 'clock-separator', 'weather-enabled', 'weather-latitude',
+    'weather-longitude', 'weather-city', 'weather-units',
+    'weather-refresh-minutes', 'metrics-enabled', 'metrics-show',
+    'metrics-show-labels', 'metrics-disk-mount', 'metrics-refresh-seconds',
+    'remote-enabled',
 ];
 
 /*
@@ -37,19 +50,45 @@ const STRUCTURAL_KEYS = [
     ...WIDGETS.map(w => w.key),
 ];
 
-export default class PanelHubExtension extends Extension {
+export default class LidgetsExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
         this._indicators = [];
         this._drawer = null;
         this._remote = null;
 
+        this._migrateSettings();
         this._seedClocks();
 
         this._settingsIds = STRUCTURAL_KEYS.map(
             key => this._settings.connect(`changed::${key}`, () => this._rebuild()));
 
         this._build();
+    }
+
+    /*
+     * Version 1.0.0 used the panel-hub identity. Copy only explicit user
+     * values, leaving new defaults intact, then never touch the legacy store
+     * again. The legacy schema ships solely to make this one-time read work.
+     */
+    _migrateSettings() {
+        if (this._settings.get_uint('settings-migration-version') >=
+            SETTINGS_MIGRATION_VERSION)
+            return;
+
+        try {
+            const legacy = this.getSettings(LEGACY_SCHEMA);
+            for (const key of MIGRATED_KEYS) {
+                const value = legacy.get_user_value(key);
+                if (value !== null)
+                    this._settings.set_value(key, value);
+            }
+        } catch (e) {
+            console.error(`Could not migrate legacy Lidgets settings: ${e.message}`);
+        } finally {
+            this._settings.set_uint(
+                'settings-migration-version', SETTINGS_MIGRATION_VERSION);
+        }
     }
 
     disable() {

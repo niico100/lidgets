@@ -1,0 +1,145 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="org.gnome.shell.extensions.lidgets"
+          path="/org/gnome/shell/extensions/lidgets/">
+
+    <key name="settings-migration-version" type="u">
+      <default>0</default>
+      <summary>Completed settings migration version</summary>
+      <description>Internal marker for one-time settings migrations.</description>
+    </key>
+
+    <!-- Global -->
+    <key name="master-enabled" type="b">
+      <default>true</default>
+      <summary>Show Lidgets</summary>
+      <description>Master switch. When off, every widget is removed from the panel.</description>
+    </key>
+    <key name="panel-box" type="s">
+      <default>'right'</default>
+      <summary>Panel box</summary>
+      <description>Which side of the panel the widgets sit in: left, center or right.</description>
+    </key>
+    <key name="panel-index" type="i">
+      <default>0</default>
+      <range min="0" max="20"/>
+      <summary>Position within the panel box</summary>
+    </key>
+
+    <!-- Drawer -->
+    <key name="drawer-mode" type="s">
+      <default>'manual'</default>
+      <summary>Drawer mode</summary>
+      <description>manual: a button in the panel folds and unfolds the widgets, remembered per monitor. auto: collapse when the widgets would take more than drawer-space-fraction of the panel. width: collapse when the monitor is narrower than drawer-max-width. always: always collapse. never: always inline.</description>
+    </key>
+    <key name="drawer-collapsed-per-monitor" type="a{sb}">
+      <default>{}</default>
+      <summary>Remembered fold state, keyed by monitor size</summary>
+      <description>Used only in manual mode. Keyed by "WIDTHxHEIGHT" of the
+      monitor holding the panel, so docking and undocking restores the choice
+      that was made on each screen rather than needing another click.</description>
+    </key>
+    <key name="drawer-space-fraction" type="i">
+      <default>35</default>
+      <range min="10" max="80"/>
+      <summary>Share of the panel the widgets may occupy</summary>
+      <description>Percent. Used only when drawer-mode is auto. Measured against
+      the widgets' own natural width, so it adapts to both the screen size and
+      how many widgets are switched on.</description>
+    </key>
+    <key name="drawer-max-width" type="i">
+      <default>1920</default>
+      <range min="640" max="7680"/>
+      <summary>Collapse below this monitor width</summary>
+      <description>Logical pixels. Used only when drawer-mode is width.</description>
+    </key>
+
+    <!-- Clocks -->
+    <key name="clocks-enabled" type="b">
+      <default>true</default>
+      <summary>Show world clocks</summary>
+    </key>
+    <key name="clocks" type="a(ss)">
+      <default>[]</default>
+      <summary>Clocks to display</summary>
+      <description>List of (label, IANA timezone) pairs, in display order.
+      Seeded once from the machine's own timezone on first run; a static
+      default cannot do that, hence clocks-seeded below.</description>
+    </key>
+    <key name="clocks-seeded" type="b">
+      <default>false</default>
+      <summary>Whether the first-run clock has been added</summary>
+      <description>Distinguishes "never configured" from "the user removed
+      every clock", so an empty list is not repopulated behind their back.</description>
+    </key>
+    <key name="clock-24h" type="b">
+      <default>true</default>
+      <summary>Use a 24-hour clock</summary>
+    </key>
+    <key name="clock-separator" type="s">
+      <default>'  ·  '</default>
+      <summary>Separator drawn between clocks</summary>
+    </key>
+
+    <!-- Weather -->
+    <key name="weather-enabled" type="b">
+      <default>true</default>
+      <summary>Show weather</summary>
+    </key>
+    <key name="weather-latitude" type="d">
+      <default>0.0</default>
+      <summary>Latitude of the chosen place</summary>
+    </key>
+    <key name="weather-longitude" type="d">
+      <default>0.0</default>
+      <summary>Longitude of the chosen place</summary>
+    </key>
+    <key name="weather-city" type="s">
+      <default>''</default>
+      <summary>Chosen place name</summary>
+      <description>Empty means no location has been chosen yet. On first run
+      the extension guesses one from the machine's timezone; it is never
+      derived from the IP address.</description>
+    </key>
+    <key name="weather-units" type="s">
+      <default>'metric'</default>
+      <summary>Units</summary>
+      <description>metric: Celsius and km/h. imperial: Fahrenheit and mph.</description>
+    </key>
+    <key name="weather-refresh-minutes" type="i">
+      <default>30</default>
+      <range min="5" max="360"/>
+      <summary>Minutes between forecast refreshes</summary>
+    </key>
+
+    <!-- Metrics -->
+    <key name="metrics-enabled" type="b">
+      <default>true</default>
+      <summary>Show system metrics</summary>
+    </key>
+    <key name="metrics-show" type="as">
+      <default>['cpu','ram','disk']</default>
+      <summary>Metrics shown in the panel</summary>
+      <description>Ordered list of metric ids. Unavailable ids are ignored.</description>
+    </key>
+    <key name="metrics-show-labels" type="b">
+      <default>true</default>
+      <summary>Use icons rather than text prefixes for metrics</summary>
+    </key>
+    <key name="metrics-disk-mount" type="s">
+      <default>'/'</default>
+      <summary>Mount point reported by the disk metric</summary>
+    </key>
+    <key name="metrics-refresh-seconds" type="i">
+      <default>3</default>
+      <range min="1" max="60"/>
+      <summary>Seconds between metric samples</summary>
+    </key>
+
+    <!-- Remote desktop banner -->
+    <key name="remote-enabled" type="b">
+      <default>true</default>
+      <summary>Show a banner while remote desktop is enabled</summary>
+    </key>
+  </schema>
+</schemalist>

@@ -13,19 +13,20 @@ or its page on [extensions.gnome.org](https://extensions.gnome.org/).
 
 ### GitHub release
 
-Download `panel-hub@neonshard.com.shell-extension.zip` from the latest GitHub
+Download `lidgets@neonshard.com.shell-extension.zip` from the latest GitHub
 release, then run:
 
 ```sh
-gnome-extensions install --force panel-hub@neonshard.com.shell-extension.zip
-gnome-extensions enable panel-hub@neonshard.com
+gnome-extensions disable panel-hub@neonshard.com 2>/dev/null || true
+gnome-extensions install --force lidgets@neonshard.com.shell-extension.zip
+gnome-extensions enable lidgets@neonshard.com
 ```
 
 Log out and back in to load new extension code under Wayland. Open the
 preferences from Extension Manager or with:
 
 ```sh
-gnome-extensions prefs panel-hub@neonshard.com
+gnome-extensions prefs lidgets@neonshard.com
 ```
 
 ### Build from source
@@ -37,7 +38,7 @@ The build requires `gnome-extensions`, Node.js, `xmllint`, and
 git clone https://github.com/niico100/lidgets.git
 cd lidgets
 make pack
-gnome-extensions install --force dist/panel-hub@neonshard.com.shell-extension.zip
+gnome-extensions install --force dist/lidgets@neonshard.com.shell-extension.zip
 ```
 
 ## Privacy and external services
@@ -48,7 +49,7 @@ preferences sends the entered place name to Open-Meteo's geocoding service.
 All other widgets use local system data. NVIDIA metrics optionally invoke the
 locally installed `nvidia-smi` command.
 
-## panel-hub@neonshard.com
+## lidgets@neonshard.com
 
 One extension replacing what used to be five separate ones, plus Vitals:
 
@@ -62,16 +63,16 @@ One extension replacing what used to be five separate ones, plus Vitals:
 | `Vitals@CoreCoding.com` | system metrics (third-party) |
 
 Everything is now configurable from the preferences window instead of by
-editing source: `gnome-extensions prefs panel-hub@neonshard.com`.
+editing source: `gnome-extensions prefs lidgets@neonshard.com`.
 
-After editing anything under `panel-hub@neonshard.com/`, see
+After editing anything under `lidgets@neonshard.com/`, see
 [RELOADING.md](RELOADING.md) — disabling and re-enabling the extension does not
 pick up code changes on Wayland.
 
 ### Layout
 
 ```
-panel-hub@neonshard.com/
+lidgets@neonshard.com/
   extension.js     entry point; builds/tears down widgets from settings
   prefs.js         Adw preferences window (4 pages)
   stylesheet.css
@@ -143,7 +144,7 @@ The automatic modes remain available:
 knowledge of the monitor, of Dash to Panel, or of other extensions. Two details
 keep it stable, and both are load-bearing:
 
-- `.panel-hub-drawer-item` sets height only. If it changed width, the measured
+- `.lidgets-drawer-item` sets height only. If it changed width, the measured
   figure would depend on whether the widgets were already folded, and the
   decision would oscillate.
 - Unfolding requires clearing the budget by `EXPAND_HYSTERESIS`, so a metric
@@ -180,11 +181,11 @@ user deleted every clock" so an empty list is not silently repopulated.
 
 ### Translations
 
-`gettext-domain` is `panel-hub`; `po/panel-hub.pot` carries 86 strings.
+`gettext-domain` is `lidgets`; `po/lidgets.pot` carries 86 strings.
 Regenerate it after changing user-visible text:
 
 ```
-xgettext --files-from=po/POTFILES --output=po/panel-hub.pot \
+xgettext --files-from=po/POTFILES --output=po/lidgets.pot \
   --language=JavaScript --from-code=UTF-8 --keyword=_ --keyword=N_
 ```
 
@@ -197,14 +198,14 @@ wrapped with `_()` at each display site instead.
 For a development checkout, symlink the extension into place:
 
 ```sh
-ln -s "$PWD/panel-hub@neonshard.com" \
-  ~/.local/share/gnome-shell/extensions/panel-hub@neonshard.com
+ln -s "$PWD/lidgets@neonshard.com" \
+  ~/.local/share/gnome-shell/extensions/lidgets@neonshard.com
 ```
 
 After editing the schema, recompile it:
 
 ```sh
-glib-compile-schemas panel-hub@neonshard.com/schemas/
+glib-compile-schemas lidgets@neonshard.com/schemas/
 ```
 
 **Reloading is constrained on this machine.** New extension directories are

@@ -1,5 +1,5 @@
 /*
- * Folds the Panel Hub indicators into a single drawer button when there is not
+ * Folds the Lidgets indicators into a single drawer button when there is not
  * enough horizontal room to show them inline.
  *
  * The indicators are reparented, not redrawn: the real actors move into the
@@ -15,8 +15,8 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 
 const DRAWER_GAP = 6;
 const SCREEN_EDGE_MARGIN = 8;
-const PANEL_ROLE = 'panel-hub-drawer';
-const RESTORE_ROLE = 'panel-hub-restore';
+const PANEL_ROLE = 'lidgets-drawer';
+const RESTORE_ROLE = 'lidgets-restore';
 
 /*
  * How much narrower than the budget the widgets must get before an already
@@ -159,13 +159,13 @@ export class Drawer {
 
     _buildDrawer() {
         this._drawerBox = new St.BoxLayout({
-            style_class: 'panel-hub-drawer-box',
+            style_class: 'lidgets-drawer-box',
             orientation: Clutter.Orientation.HORIZONTAL,
             y_align: Clutter.ActorAlign.CENTER,
         });
 
         this._drawer = new St.Bin({
-            style_class: 'panel-hub-drawer popup-menu-content',
+            style_class: 'lidgets-drawer popup-menu-content',
             child: this._drawerBox,
             reactive: true,
         });
@@ -466,7 +466,7 @@ export class Drawer {
 
             parent.remove_child(movable);
             this._drawerBox.add_child(movable);
-            indicator.add_style_class_name('panel-hub-drawer-item');
+            indicator.add_style_class_name('lidgets-drawer-item');
             movable.show();
             indicator.show();
         }
@@ -485,7 +485,7 @@ export class Drawer {
             if (movable.get_parent() === this._drawerBox)
                 this._drawerBox.remove_child(movable);
             if (!this._isDead(indicator))
-                indicator.remove_style_class_name('panel-hub-drawer-item');
+                indicator.remove_style_class_name('lidgets-drawer-item');
 
             /*
              * Dash to Panel rebuilds its boxes on monitor changes, so the

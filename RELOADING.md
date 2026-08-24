@@ -49,7 +49,7 @@ imported standalone and the drawer rebuilt in place.
 `/absolute/path/to/lidgets` with the checkout path:
 
 ```js
-const E = Main.extensionManager.lookup('panel-hub@neonshard.com').stateObj; const M = await import('file:///absolute/path/to/lidgets/panel-hub@neonshard.com/lib/drawer.js?v=' + Date.now()); E._drawer.destroy(); E._drawer = new M.Drawer(E._settings, () => E._indicators); 'drawer reloaded'
+const E = Main.extensionManager.lookup('lidgets@neonshard.com').stateObj; const M = await import('file:///absolute/path/to/lidgets/lidgets@neonshard.com/lib/drawer.js?v=' + Date.now()); E._drawer.destroy(); E._drawer = new M.Drawer(E._settings, () => E._indicators); 'drawer reloaded'
 ```
 
 Looking Glass evaluates through `AsyncFunction`, so top-level `await` is fine.
@@ -57,8 +57,8 @@ It splits the input on `;` and prefixes the last fragment with `return`, so end
 on an expression.
 
 If it throws, the drawer is gone but the widgets fall back inline; recover with
-`gnome-extensions disable panel-hub@neonshard.com && gnome-extensions enable
-panel-hub@neonshard.com`.
+`gnome-extensions disable lidgets@neonshard.com && gnome-extensions enable
+lidgets@neonshard.com`.
 
 This only swaps `lib/drawer.js`. Changes to `extension.js` itself, or to which
 widgets are constructed, still need a real restart.
@@ -71,10 +71,10 @@ A headless shell imports the extension fresh, so it always runs current code:
 ADDR=$(dbus-daemon --session --print-address --fork)
 env DBUS_SESSION_BUS_ADDRESS="$ADDR" \
     gnome-shell --headless --virtual-monitor 1280x800 --wayland-display=phtest &
-env DBUS_SESSION_BUS_ADDRESS="$ADDR" gnome-extensions info panel-hub@neonshard.com
+env DBUS_SESSION_BUS_ADDRESS="$ADDR" gnome-extensions info lidgets@neonshard.com
 env DBUS_SESSION_BUS_ADDRESS="$ADDR" gdbus call --session --dest org.gnome.Shell \
     --object-path /org/gnome/Shell \
-    --method org.gnome.Shell.Extensions.GetExtensionErrors panel-hub@neonshard.com
+    --method org.gnome.Shell.Extensions.GetExtensionErrors lidgets@neonshard.com
 ```
 
 `--nested` was removed in Shell 50; plain `--wayland` runs nested, and

@@ -1,4 +1,4 @@
-UUID := panel-hub@neonshard.com
+UUID := lidgets@neonshard.com
 SOURCE_DIR := $(UUID)
 DIST_DIR := dist
 ARCHIVE := $(DIST_DIR)/$(UUID).shell-extension.zip

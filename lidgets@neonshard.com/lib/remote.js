@@ -50,7 +50,7 @@ export class RemoteBanner {
     _createIndicator() {
         const indicator = new St.BoxLayout({
             y_align: Clutter.ActorAlign.CENTER,
-            style_class: 'panel-hub-remote-banner',
+            style_class: 'lidgets-remote-banner',
         });
         indicator.add_child(new St.Icon({
             icon_name: 'computer-symbolic',

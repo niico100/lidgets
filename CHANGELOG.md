@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Rename the extension identity from Panel Hub to Lidgets, with a one-time
+  migration for existing settings.
 - Allow clock separators to be hidden while retaining spacing between clocks.
 - Make timezone search city-first, so queries such as `Prague` and `New York`
   find their canonical IANA zones.
