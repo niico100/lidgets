@@ -164,17 +164,32 @@ export default class PanelHubPreferences extends ExtensionPreferences {
         }));
 
         const drawer = new Adw.PreferencesGroup({
-            title: 'Narrow screens',
-            description: 'On a small display the widgets can fold into a single ' +
-                'drawer button. They keep running while collapsed.',
+            title: 'When space is tight',
+            description: 'The widgets can fold into a single drawer button. ' +
+                'They keep running while collapsed.',
         });
         page.add(drawer);
 
-        drawer.add(makeChoiceRow(settings, 'drawer-mode', 'Collapse into a drawer', null, [
-            {label: 'Automatically on narrow screens', value: 'auto'},
-            {label: 'Always', value: 'always'},
-            {label: 'Never', value: 'never'},
-        ]));
+        const modeRow = makeChoiceRow(settings, 'drawer-mode',
+            'Collapse into a drawer', null, [
+                {label: 'When the widgets would not fit', value: 'auto'},
+                {label: 'When the screen is narrower than a set width', value: 'width'},
+                {label: 'Always', value: 'always'},
+                {label: 'Never', value: 'never'},
+            ]);
+        drawer.add(modeRow);
+
+        const fractionAdjustment = new Gtk.Adjustment({
+            lower: 10, upper: 80, step_increment: 5, page_increment: 10,
+        });
+        bindIntAdjustment(settings, 'drawer-space-fraction', fractionAdjustment);
+        const fractionRow = new Adw.SpinRow({
+            title: 'Fold once the widgets exceed',
+            subtitle: 'Percent of the panel width. Measured against the widgets ' +
+                'themselves, so it follows both the screen and how many are on.',
+            adjustment: fractionAdjustment,
+        });
+        drawer.add(fractionRow);
 
         const widthAdjustment = new Gtk.Adjustment({
             lower: 640, upper: 7680, step_increment: 32, page_increment: 128,
@@ -186,6 +201,15 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             adjustment: widthAdjustment,
         });
         drawer.add(widthRow);
+
+        // Only one of the two thresholds applies at a time; grey out the other.
+        const syncThresholdRows = () => {
+            const mode = settings.get_string('drawer-mode');
+            fractionRow.sensitive = mode === 'auto';
+            widthRow.sensitive = mode === 'width';
+        };
+        settings.connect('changed::drawer-mode', syncThresholdRows);
+        syncThresholdRows();
 
         return page;
     }

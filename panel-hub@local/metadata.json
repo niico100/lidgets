@@ -3,8 +3,10 @@
   "name": "Panel Hub",
   "description": "World clocks, weather and system metrics in one configurable panel widget, with a drawer that folds them away on narrow screens.",
   "shell-version": [
+    "48",
+    "49",
     "50"
   ],
   "settings-schema": "org.gnome.shell.extensions.panel-hub",
-  "version": 1
+  "version": 2
 }

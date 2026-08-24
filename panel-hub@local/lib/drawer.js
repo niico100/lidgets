@@ -8,12 +8,27 @@
 
 import St from 'gi://St';
 import Clutter from 'gi://Clutter';
+import GLib from 'gi://GLib';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 
 const DRAWER_GAP = 6;
 const SCREEN_EDGE_MARGIN = 8;
 const PANEL_ROLE = 'panel-hub-drawer';
+
+/*
+ * How much narrower than the budget the widgets must get before an already
+ * collapsed drawer expands again, in logical pixels.
+ */
+const EXPAND_HYSTERESIS = 48;
+
+/*
+ * Widget text changes width as clocks tick and metrics move, so the fit is
+ * rechecked on a slow timer. Ten measurements of our own actors is far too
+ * cheap to be worth driving off allocation signals, which would risk
+ * re-entering during a relayout.
+ */
+const RECHECK_SECONDS = 5;
 
 export class Drawer {
     /*
@@ -28,16 +43,35 @@ export class Drawer {
         this._collapsed = false;
         this._open = false;
         this._capturedEventId = 0;
+        this._idleId = 0;
+        this._recheckId = 0;
 
         this._buildToggle();
         this._buildDrawer();
 
         this._monitorsChangedId = Main.layoutManager.connect(
             'monitors-changed', () => this.sync());
-        this._settingsIds = ['drawer-mode', 'drawer-max-width'].map(
-            key => settings.connect(`changed::${key}`, () => this.sync()));
+        this._settingsIds =
+            ['drawer-mode', 'drawer-max-width', 'drawer-space-fraction'].map(
+                key => settings.connect(`changed::${key}`, () => this.sync()));
 
         this.sync();
+
+        /*
+         * At construction the indicators have not been allocated yet, so their
+         * preferred width is not yet meaningful. Re-decide once the first
+         * layout has happened, then keep checking as the text changes.
+         */
+        this._idleId = GLib.idle_add(GLib.PRIORITY_LOW, () => {
+            this._idleId = 0;
+            this.sync();
+            return GLib.SOURCE_REMOVE;
+        });
+        this._recheckId = GLib.timeout_add_seconds(
+            GLib.PRIORITY_LOW, RECHECK_SECONDS, () => {
+                this.sync();
+                return GLib.SOURCE_CONTINUE;
+            });
     }
 
     /* ---------------------------------------------------------------- setup */
@@ -53,11 +87,21 @@ export class Drawer {
          * Shell 50 drives panel buttons with a ClickGesture, and passing
          * dontCreateMenu leaves that gesture disabled. Add our own so the
          * button toggles the drawer instead of opening a menu.
+         *
+         * Shells before 49 have no ClickGesture, so fall back to the button
+         * press signal those versions used.
          */
-        const click = new Clutter.ClickGesture();
-        click.set_recognize_on_press(true);
-        click.connect('recognize', () => this._toggleDrawer());
-        this._toggle.add_action(click);
+        if (Clutter.ClickGesture) {
+            const click = new Clutter.ClickGesture();
+            click.set_recognize_on_press(true);
+            click.connect('recognize', () => this._toggleDrawer());
+            this._toggle.add_action(click);
+        } else {
+            this._toggle.connect('button-press-event', () => {
+                this._toggleDrawer();
+                return Clutter.EVENT_STOP;
+            });
+        }
 
         // Reclaim the role if a previous run died before releasing it.
         // Destroying the old indicator is what deletes the statusArea entry.
@@ -155,6 +199,31 @@ export class Drawer {
         return monitor ?? Main.layoutManager.primaryMonitor;
     }
 
+    /*
+     * The natural width our own indicators need, whether they are currently
+     * inline or already in the drawer. The drawer style class deliberately
+     * changes only height, so this figure does not depend on which state we
+     * are in -- which is what stops the decision below from oscillating.
+     */
+    _widgetsWidth() {
+        let total = 0;
+        for (const indicator of this._getIndicators()) {
+            if (!indicator || this._isDead(indicator))
+                continue;
+            const [, natural] = this._movable(indicator).get_preferred_width(-1);
+            total += natural;
+        }
+        return total;
+    }
+
+    /*
+     * "Do my widgets fit?" rather than "is the screen small?".
+     *
+     * A fixed pixel threshold has to be guessed per machine, and guesses wrong
+     * as soon as the screen, the scale factor or the set of enabled widgets
+     * changes. Measuring our own actors against a share of the panel needs no
+     * knowledge of the monitor, of Dash to Panel, or of other extensions.
+     */
     _shouldCollapse() {
         const mode = this._settings.get_string('drawer-mode');
         if (mode === 'never')
@@ -163,8 +232,29 @@ export class Drawer {
             return true;
 
         const monitor = this._panelMonitor();
-        return !!monitor &&
-            monitor.width < this._settings.get_int('drawer-max-width');
+        if (!monitor)
+            return false;
+
+        if (mode === 'width')
+            return monitor.width < this._settings.get_int('drawer-max-width');
+
+        const width = this._widgetsWidth();
+        // Before the first allocation the actors have no meaningful size; stay
+        // inline and let the recheck timer settle it a moment later.
+        if (width === 0)
+            return this._collapsed;
+
+        const budget = monitor.width *
+            (this._settings.get_int('drawer-space-fraction') / 100);
+
+        /*
+         * Asymmetric thresholds: once collapsed, require a clear margin before
+         * expanding again, so a metric reading gaining a digit cannot make the
+         * panel flap back and forth on the boundary.
+         */
+        return this._collapsed
+            ? width > budget - EXPAND_HYSTERESIS
+            : width > budget;
     }
 
     /* ------------------------------------------------------------- collapse */
@@ -392,6 +482,13 @@ export class Drawer {
 
     destroy() {
         this.close();
+
+        for (const id of [this._idleId, this._recheckId]) {
+            if (id !== 0)
+                GLib.source_remove(id);
+        }
+        this._idleId = 0;
+        this._recheckId = 0;
 
         if (this._monitorsChangedId) {
             Main.layoutManager.disconnect(this._monitorsChangedId);

@@ -24,13 +24,21 @@
     <key name="drawer-mode" type="s">
       <default>'auto'</default>
       <summary>Drawer mode</summary>
-      <description>auto: collapse into a drawer when the panel monitor is narrow. always: always collapse. never: always inline.</description>
+      <description>auto: collapse when the widgets would take more than drawer-space-fraction of the panel. width: collapse when the monitor is narrower than drawer-max-width. always: always collapse. never: always inline.</description>
+    </key>
+    <key name="drawer-space-fraction" type="i">
+      <default>35</default>
+      <range min="10" max="80"/>
+      <summary>Share of the panel the widgets may occupy</summary>
+      <description>Percent. Used only when drawer-mode is auto. Measured against
+      the widgets' own natural width, so it adapts to both the screen size and
+      how many widgets are switched on.</description>
     </key>
     <key name="drawer-max-width" type="i">
       <default>1920</default>
       <range min="640" max="7680"/>
       <summary>Collapse below this monitor width</summary>
-      <description>Logical pixels. Used only when drawer-mode is auto.</description>
+      <description>Logical pixels. Used only when drawer-mode is width.</description>
     </key>
 
     <!-- Clocks -->

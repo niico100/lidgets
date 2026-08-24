@@ -33,11 +33,14 @@
  * pull it back to something proportionate. The class is applied from JS on
  * collapse and removed on restore, which is more reliable than matching St
  * type names with a selector.
+ *
+ * Height only, deliberately: the drawer decides whether to collapse by
+ * measuring these same actors, so anything that changed their width here
+ * would change the answer depending on which state they were already in.
  */
 .panel-hub-drawer-item {
     height: 32px;
     min-height: 32px;
-    padding: 0 6px;
 }
 
 /* Deliberately loud -- this warns that the machine is reachable remotely. */

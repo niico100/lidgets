@@ -41,13 +41,48 @@ machine supports.
 
 ### Metrics
 
-Read directly from `/proc` and `/sys`; no subprocesses, no external libraries.
-On this machine all eleven are available: CPU load, CPU temp (k10temp), GPU
-load and temp plus VRAM (amdgpu `gpu_busy_percent` / `mem_info_vram_used`),
-RAM, swap, free space, network throughput, fan (gpdfan), battery.
+Read from `/proc` and `/sys`. `available()` advertises only what the machine
+can actually answer, so no metric ever shows a permanent `--`.
+
+GPU support is per vendor, because they expose entirely different things:
+
+| Vendor | Load | VRAM | Temp | Clock |
+|---|---|---|---|---|
+| AMD (`gpu_busy_percent`) | yes | yes | hwmon | — |
+| NVIDIA (`nvidia-smi`) | yes | yes | yes | — |
+| Intel | no sysfs counter | integrated | hwmon | yes |
+
+NVIDIA needs a subprocess, so it is sampled on its own 5-second clock with the
+last answer reused in between, rather than at the panel's rate. Detection
+requires `/proc/driver/nvidia/gpus` to be non-empty — `nvidia-smi` is often
+installed on machines with no NVIDIA card, since it ships with CUDA tooling.
 
 Free space is queried asynchronously because it can touch a real filesystem;
 everything else is memory-backed and sampled synchronously.
+
+### Drawer collapse
+
+The default `auto` mode asks *"do my widgets fit?"* rather than *"is the screen
+small?"*: it measures the natural width of its own indicators against a share
+of the panel (`drawer-space-fraction`, default 35%). That needs no knowledge of
+the monitor, of Dash to Panel, or of other extensions, and adapts to both the
+screen and how many widgets are switched on.
+
+Two details keep it stable:
+
+- `.panel-hub-drawer-item` sets height only. If it changed width, the measured
+  figure would depend on whether the widgets were already collapsed, and the
+  decision would oscillate.
+- Expanding again requires clearing the budget by `EXPAND_HYSTERESIS`, so a
+  metric gaining a digit cannot make the panel flap.
+
+`width` mode is the older fixed-pixel behaviour, kept as an explicit option.
+
+### Dash to Panel
+
+Not required. It is used where available for extra precision — which monitor
+the panel is on, and which screen edge it occupies — and every reference is
+optional-chained with a plain-GNOME fallback.
 
 ## Development
 

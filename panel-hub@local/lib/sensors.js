@@ -63,6 +63,13 @@ export function formatBytes(bytes) {
     return `${rounded}${units[unit]}`;
 }
 
+/*
+ * nvidia-smi takes on the order of 100-300ms, so it must not run at the
+ * panel's own sampling rate. Five seconds is frequent enough for a load
+ * readout and cheap enough not to matter.
+ */
+const NVIDIA_MIN_INTERVAL_US = 5 * 1e6;
+
 function formatRate(bytesPerSecond) {
     return `${formatBytes(bytesPerSecond)}/s`;
 }
@@ -76,6 +83,7 @@ export const METRIC_DEFS = [
     {id: 'cpu', name: 'CPU', title: 'CPU load'},
     {id: 'cpu-temp', name: 'CPU', title: 'CPU temperature'},
     {id: 'gpu', name: 'GPU', title: 'GPU load'},
+    {id: 'gpu-freq', name: 'GPU', title: 'GPU clock'},
     {id: 'gpu-temp', name: 'GPU', title: 'GPU temperature'},
     {id: 'vram', name: 'VRAM', title: 'Video memory used'},
     {id: 'ram', name: 'RAM', title: 'Memory used'},
@@ -91,7 +99,7 @@ export class Sensors {
         this._hwmon = this._findHwmon();
         this._gpu = this._findGpu();
         this._cpuTemp = this._findCpuTemp();
-        this._gpuTemp = this._findTempInput(this._hwmon['amdgpu']);
+        this._gpuTemp = this._findGpuTemp();
         this._fan = this._findFan();
         this._battery = this._findBattery();
 
@@ -100,6 +108,9 @@ export class Sensors {
         this._diskCache = null;
         this._diskPending = false;
         this._diskMount = '/';
+        this._nvidiaCache = null;
+        this._nvidiaPending = false;
+        this._nvidiaAt = 0;
     }
 
     /* ------------------------------------------------------------ discovery */
@@ -120,14 +131,48 @@ export class Sensors {
         return map;
     }
 
+    /*
+     * The three GPU vendors expose completely different things:
+     *
+     *   amd    - load and VRAM straight from sysfs, free and instant
+     *   intel  - no load counter in sysfs at all (it needs perf counters, the
+     *            way intel_gpu_top does), but the actual clock is readable
+     *   nvidia - nothing useful in sysfs; only nvidia-smi reports load, and
+     *            that costs a subprocess, so it is sampled on a slower clock
+     *
+     * Detection returns a backend descriptor rather than a path so sample()
+     * can branch once, and available() can advertise only what each vendor
+     * can really answer.
+     */
     _findGpu() {
         for (const entry of listDir('/sys/class/drm')) {
             if (!/^card\d+$/.test(entry))
                 continue;
             const base = `/sys/class/drm/${entry}/device`;
             if (GLib.file_test(`${base}/gpu_busy_percent`, GLib.FileTest.EXISTS))
-                return base;
+                return {kind: 'amd', base};
         }
+
+        for (const entry of listDir('/sys/class/drm')) {
+            if (!/^card\d+$/.test(entry))
+                continue;
+            // i915 exposes gt_act_freq_mhz; the newer xe driver moved it.
+            for (const rel of ['gt_act_freq_mhz', 'gt/gt0/rps_act_freq_mhz']) {
+                const path = `/sys/class/drm/${entry}/${rel}`;
+                if (GLib.file_test(path, GLib.FileTest.EXISTS))
+                    return {kind: 'intel', freqPath: path};
+            }
+        }
+
+        /*
+         * nvidia-smi is often installed on machines with no NVIDIA card at
+         * all (it ships with CUDA tooling), so require the driver to have
+         * actually bound a GPU before believing it.
+         */
+        const smi = GLib.find_program_in_path('nvidia-smi');
+        if (smi && listDir('/proc/driver/nvidia/gpus').length > 0)
+            return {kind: 'nvidia', smi};
+
         return null;
     }
 
@@ -137,7 +182,8 @@ export class Sensors {
      * Intel's coretemp and the ACPI thermal zone are the fallbacks.
      */
     _findCpuTemp() {
-        for (const name of ['k10temp', 'coretemp', 'zenpower', 'acpitz']) {
+        for (const name of ['k10temp', 'coretemp', 'zenpower',
+            'cpu_thermal', 'nct6775', 'it87', 'acpitz']) {
             const path = this._hwmon[name];
             if (!path)
                 continue;
@@ -168,6 +214,20 @@ export class Sensors {
         return null;
     }
 
+    /*
+     * NVIDIA reports its own temperature through nvidia-smi, so it is absent
+     * here on purpose -- sample() fills gpu-temp in from the same query that
+     * gives it load and memory.
+     */
+    _findGpuTemp() {
+        for (const name of ['amdgpu', 'i915', 'xe', 'nouveau']) {
+            const found = this._findTempInput(this._hwmon[name]);
+            if (found)
+                return found;
+        }
+        return null;
+    }
+
     _findTempInput(hwmonPath) {
         if (!hwmonPath)
             return null;
@@ -179,7 +239,8 @@ export class Sensors {
     }
 
     _findFan() {
-        for (const name of ['gpdfan', 'amdgpu', 'acpi_fan', 'thinkpad']) {
+        for (const name of ['gpdfan', 'amdgpu', 'thinkpad', 'dell_smm',
+            'nct6775', 'it87', 'applesmc', 'acpi_fan']) {
             const path = this._hwmon[name];
             if (!path)
                 continue;
@@ -208,13 +269,28 @@ export class Sensors {
      */
     available() {
         const ok = new Set(['cpu', 'ram', 'disk', 'net']);
-        if (GLib.file_test('/proc/meminfo', GLib.FileTest.EXISTS))
+
+        // A swapless machine should not get a row that permanently reads "off".
+        const mem = this._sampleMem();
+        if (mem && mem.swapTotal > 0)
             ok.add('swap');
-        if (this._gpu)
+
+        switch (this._gpu?.kind) {
+        case 'amd':
             ok.add('gpu').add('vram');
+            break;
+        case 'nvidia':
+            ok.add('gpu').add('vram');
+            break;
+        case 'intel':
+            // No load counter available; the clock is the honest substitute.
+            ok.add('gpu-freq');
+            break;
+        }
+
         if (this._cpuTemp)
             ok.add('cpu-temp');
-        if (this._gpuTemp)
+        if (this._gpuTemp || this._gpu?.kind === 'nvidia')
             ok.add('gpu-temp');
         if (this._fan)
             ok.add('fan');
@@ -335,6 +411,49 @@ export class Sensors {
     }
 
     /*
+     * NVIDIA needs a subprocess, which is far too expensive to run at the
+     * panel's sampling rate, so it gets its own slower clock and the last
+     * answer is reused in between. One query returns every NVIDIA figure.
+     */
+    _refreshNvidiaAsync() {
+        if (this._nvidiaPending)
+            return;
+
+        const now = GLib.get_monotonic_time();
+        if (this._nvidiaAt !== 0 && now - this._nvidiaAt < NVIDIA_MIN_INTERVAL_US)
+            return;
+
+        this._nvidiaPending = true;
+        try {
+            const proc = Gio.Subprocess.new([
+                this._gpu.smi,
+                '--query-gpu=utilization.gpu,memory.used,memory.total,temperature.gpu',
+                '--format=csv,noheader,nounits',
+            ], Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
+
+            proc.communicate_utf8_async(null, null, (source, result) => {
+                this._nvidiaPending = false;
+                this._nvidiaAt = GLib.get_monotonic_time();
+                try {
+                    const [, stdout] = source.communicate_utf8_finish(result);
+                    const [util, used, total, temp] = stdout.trim().split('\n')[0]
+                        .split(',').map(field => Number(field.trim()));
+                    this._nvidiaCache = Number.isFinite(util)
+                        ? {util, used: used * 1024 * 1024, total: total * 1024 * 1024, temp}
+                        : null;
+                } catch {
+                    this._nvidiaCache = null;
+                }
+            });
+        } catch {
+            // Spawning failed outright; stop trying until the next interval.
+            this._nvidiaPending = false;
+            this._nvidiaAt = now;
+            this._nvidiaCache = null;
+        }
+    }
+
+    /*
      * Returns {id: {short, detail}} for every available metric. `short` is the
      * compact panel form; `detail` is the fuller dropdown form.
      */
@@ -375,12 +494,13 @@ export class Sensors {
             put('disk', '--');
         }
 
-        if (this._gpu) {
-            const busy = readNumber(`${this._gpu}/gpu_busy_percent`);
+        switch (this._gpu?.kind) {
+        case 'amd': {
+            const busy = readNumber(`${this._gpu.base}/gpu_busy_percent`);
             put('gpu', busy === null ? '--' : `${Math.round(busy)}%`);
 
-            const used = readNumber(`${this._gpu}/mem_info_vram_used`);
-            const total = readNumber(`${this._gpu}/mem_info_vram_total`);
+            const used = readNumber(`${this._gpu.base}/mem_info_vram_used`);
+            const total = readNumber(`${this._gpu.base}/mem_info_vram_total`);
             if (used !== null && total) {
                 put('vram', formatBytes(used),
                     `${formatBytes(used)} of ${formatBytes(total)}  (${Math.round(100 * used / total)}%)`);
@@ -389,6 +509,27 @@ export class Sensors {
             } else {
                 put('vram', '--');
             }
+            break;
+        }
+        case 'intel': {
+            const mhz = readNumber(this._gpu.freqPath);
+            put('gpu-freq', mhz === null ? '--' : `${Math.round(mhz)}MHz`);
+            break;
+        }
+        case 'nvidia': {
+            this._refreshNvidiaAsync();
+            const nv = this._nvidiaCache;
+            put('gpu', nv ? `${Math.round(nv.util)}%` : '--');
+            if (nv && nv.total > 0) {
+                put('vram', formatBytes(nv.used),
+                    `${formatBytes(nv.used)} of ${formatBytes(nv.total)}  (${Math.round(100 * nv.used / nv.total)}%)`);
+            } else {
+                put('vram', '--');
+            }
+            if (nv && Number.isFinite(nv.temp))
+                put('gpu-temp', `${Math.round(nv.temp)}°C`);
+            break;
+        }
         }
 
         for (const [id, path] of [['cpu-temp', this._cpuTemp], ['gpu-temp', this._gpuTemp]]) {
