@@ -5,6 +5,9 @@
 - Allow clock separators to be hidden while retaining spacing between clocks.
 - Make timezone search city-first, so queries such as `Prague` and `New York`
   find their canonical IANA zones.
+- Include the country flag in automatically generated clock labels where tzdata
+  identifies one, and keep that label in sync when its timezone changes.
+- Add a per-clock option to show the city or display only its country flag.
 
 ## 1.0.0 — 2026-08-24
 

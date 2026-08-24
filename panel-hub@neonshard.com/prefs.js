@@ -47,6 +47,41 @@ const FALLBACK_TIMEZONES = [
     'Australia/Sydney', 'Pacific/Auckland',
 ];
 
+let timezoneCountries;
+
+function loadTimezoneCountries() {
+    const countries = new Map();
+    for (const path of ['/usr/share/zoneinfo/zone1970.tab',
+        '/usr/share/zoneinfo/zone.tab']) {
+        try {
+            const [ok, bytes] = GLib.file_get_contents(path);
+            if (!ok)
+                continue;
+
+            for (const line of new TextDecoder('utf-8').decode(bytes).split('\n')) {
+                if (!line || line.startsWith('#'))
+                    continue;
+                const [countryCodes, , zone] = line.split('\t');
+                if (zone && !countries.has(zone))
+                    countries.set(zone, countryCodes.split(',')[0]);
+            }
+            if (countries.size > 0)
+                break;
+        } catch {
+            // A timezone label still works when the optional tzdata table is absent.
+        }
+    }
+    return countries;
+}
+
+function countryFlag(countryCode) {
+    if (!/^[A-Z]{2}$/.test(countryCode ?? ''))
+        return '';
+    return [...countryCode]
+        .map(letter => String.fromCodePoint(letter.codePointAt(0) + 127397))
+        .join('');
+}
+
 function allTimezones() {
     let zones;
     try {
@@ -61,6 +96,25 @@ function allTimezones() {
         timezoneSearchLabel(left).localeCompare(timezoneSearchLabel(right)));
 }
 
+function timezoneLocality(zone) {
+    return zone.split('/').at(-1).replaceAll('_', ' ');
+}
+
+function automaticTimezoneLabel(zone) {
+    timezoneCountries ??= loadTimezoneCountries();
+    const flag = timezoneFlag(zone);
+    return `${flag ? `${flag} ` : ''}${timezoneLocality(zone)}`;
+}
+
+function timezoneFlag(zone) {
+    timezoneCountries ??= loadTimezoneCountries();
+    return countryFlag(timezoneCountries.get(zone));
+}
+
+function clockLabelShowsCity(label, zone) {
+    return label.trim() !== timezoneFlag(zone);
+}
+
 /*
  * Adw.ComboRow searches from the beginning of its display string. Put the
  * locality first so ordinary queries such as "Prague" and "New York" find
@@ -69,7 +123,7 @@ function allTimezones() {
  */
 function timezoneSearchLabel(zone) {
     const parts = zone.split('/');
-    const locality = parts.at(-1).replaceAll('_', ' ');
+    const locality = timezoneLocality(zone);
     return parts.length === 1
         ? locality
         : `${locality} — ${zone.replaceAll('_', ' ')}`;
@@ -405,18 +459,51 @@ export default class PanelHubPreferences extends ExtensionPreferences {
 
                 const label = new Adw.EntryRow({title: _('Label')});
                 label.text = clock[0];
+                const showCity = new Adw.SwitchRow({
+                    title: _('Show city'),
+                    subtitle: _('Keep only the country flag when off'),
+                });
+                showCity.active = clockLabelShowsCity(clock[0], clock[1]);
+                let syncingShowCity = false;
                 label.connect('changed', () => {
                     clocks[index][0] = label.text;
                     row.title = label.text || clocks[index][1];
+                    syncingShowCity = true;
+                    showCity.active = clockLabelShowsCity(label.text, clocks[index][1]);
+                    syncingShowCity = false;
                     save();
                 });
                 row.add_row(label);
 
+                showCity.connect('notify::active', () => {
+                    if (syncingShowCity)
+                        return;
+                    label.text = showCity.active
+                        ? automaticTimezoneLabel(clocks[index][1])
+                        : timezoneFlag(clocks[index][1]);
+                });
+                row.add_row(showCity);
+
                 row.add_row(makeTimezoneRow(timezones, clock[1], zone => {
+                    const oldZone = clocks[index][1];
+                    const showedCity = clockLabelShowsCity(
+                        clocks[index][0], oldZone);
+                    const labelWasAutomatic =
+                        clocks[index][0] === timezoneLocality(oldZone) ||
+                        clocks[index][0] === automaticTimezoneLabel(oldZone) ||
+                        clocks[index][0] === timezoneFlag(oldZone);
                     clocks[index][1] = zone;
                     row.subtitle = zone;
-                    if (!clocks[index][0])
+                    if (labelWasAutomatic) {
+                        const automaticLabel = showedCity
+                            ? automaticTimezoneLabel(zone)
+                            : timezoneFlag(zone);
+                        clocks[index][0] = automaticLabel;
+                        label.text = automaticLabel;
+                        row.title = automaticLabel;
+                    } else if (!clocks[index][0]) {
                         row.title = zone;
+                    }
                     save();
                 }));
 
@@ -432,7 +519,7 @@ export default class PanelHubPreferences extends ExtensionPreferences {
             // Start from the machine's own zone: more often right than UTC,
             // and it gives the new row a meaningful title straight away.
             const zone = localTimezone();
-            clocks.push([zone.split('/').pop().replace(/_/g, ' '), zone]);
+            clocks.push([automaticTimezoneLabel(zone), zone]);
             save();
             rebuild();
             // Open the new row so the label and zone are ready to edit.

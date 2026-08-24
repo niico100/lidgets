@@ -237,8 +237,16 @@ msgstr ""
 msgid "Remove this clock"
 msgstr ""
 
-#: prefs.js:391
+#: prefs.js:460
 msgid "Label"
+msgstr ""
+
+#: prefs.js:463
+msgid "Show city"
+msgstr ""
+
+#: prefs.js:464
+msgid "Keep only the country flag when off"
 msgstr ""
 
 #: prefs.js:442
