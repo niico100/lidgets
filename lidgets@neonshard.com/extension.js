@@ -83,11 +83,10 @@ export default class LidgetsExtension extends Extension {
                 if (value !== null)
                     this._settings.set_value(key, value);
             }
-        } catch (e) {
-            console.error(`Could not migrate legacy Lidgets settings: ${e.message}`);
-        } finally {
             this._settings.set_uint(
                 'settings-migration-version', SETTINGS_MIGRATION_VERSION);
+        } catch (e) {
+            console.error(`Could not migrate legacy Lidgets settings: ${e.message}`);
         }
     }
 
