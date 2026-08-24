@@ -1,1 +1,2 @@
-schemas/gschemas.compiled
+# schemas/gschemas.compiled is deliberately tracked: a manually installed
+# extension will not load without it, and EGO zips ship it too.
