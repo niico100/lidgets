@@ -13,6 +13,7 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 import {
     log, monotonicMs, warn, warnRateLimited,
 } from './diagnostics.js';
+import {clockLabel} from './timezones.js';
 
 /*
  * Preferences enforce the same limit, but settings can also be changed with
@@ -91,7 +92,8 @@ class ClocksIndicator extends PanelMenu.Button {
         });
         this.add_child(this._label);
 
-        this._settingsIds = ['clocks', 'clock-24h', 'clock-separator'].map(
+        this._settingsIds =
+            ['clock-entries', 'clock-24h', 'clock-separator'].map(
             key => settings.connect(
                 `changed::${key}`, () => this._queueRefresh(key)));
 
@@ -102,7 +104,7 @@ class ClocksIndicator extends PanelMenu.Button {
     }
 
     _clocks() {
-        const clocks = this._settings.get_value('clocks').deepUnpack();
+        const clocks = this._settings.get_value('clock-entries').deepUnpack();
         if (clocks.length <= MAX_CLOCKS) {
             this._warnedClockOverflow = false;
             return clocks;
@@ -175,9 +177,9 @@ class ClocksIndicator extends PanelMenu.Button {
 
             phase = 'updating panel label';
             this._label.text = clocks
-                .map(([name, zone]) => (
-                    `${boundedText(name, MAX_LABEL_LENGTH)} ` +
-                    formatTime(zone, use24h)).trim())
+                .map(entry => (
+                    `${boundedText(clockLabel(entry), MAX_LABEL_LENGTH)} ` +
+                    formatTime(entry[0], use24h)).trim())
                 .join(separator);
 
             phase = 'rebuilding menu';
@@ -214,8 +216,9 @@ class ClocksIndicator extends PanelMenu.Button {
             return;
         }
 
-        for (const [name, zone] of clocks) {
-            const displayName = boundedText(name, MAX_LABEL_LENGTH);
+        for (const entry of clocks) {
+            const zone = entry[0];
+            const displayName = boundedText(clockLabel(entry), MAX_LABEL_LENGTH);
             const item = new PopupMenu.PopupBaseMenuItem({
                 reactive: false,
                 can_focus: false,

@@ -9,7 +9,14 @@
   find their canonical IANA zones.
 - Include the country flag in automatically generated clock labels where tzdata
   identifies one, and keep that label in sync when its timezone changes.
-- Add a per-clock option to show the city or display only its country flag.
+- Add independent per-clock switches for the country flag and the city name, so
+  a clock can show either, both, or neither. Custom label text survives a flag
+  toggle, and the flag switch explains itself on zones tzdata gives no country.
+- Stop the "Show city" switch and the clock label from driving each other in a
+  loop, which hung the preferences window and wrote a blank label to settings.
+- Show the moon in its current phase instead of a sun when the sky is clear
+  after dark, mirrored in the southern hemisphere, and drop the sun from the
+  partly cloudy, drizzle and shower symbols at night.
 - Bound and coalesce clock refreshes, constrain malformed display settings,
   and ignore stale or post-destruction weather callbacks.
 

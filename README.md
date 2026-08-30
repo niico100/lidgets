@@ -81,6 +81,7 @@ lidgets@neonshard.com/
   LICENSE          GPL-2.0 license
   lib/
     sensors.js     /proc + /sys sampling; imported by prefs.js too
+    timezones.js   flag/city label composition; imported by prefs.js too
     metrics.js     metrics panel indicator
     clocks.js      world clocks indicator
     weather.js     Open-Meteo indicator
@@ -169,6 +170,19 @@ default to ship.
 The compact panel reading omits the city to save space; clicking the weather
 opens a forecast headed with the selected location.
 
+### Night symbols
+
+Open-Meteo reports `is_day` alongside each weather code, so after dark the
+symbols that would otherwise draw a sun stop doing so. A clear sky becomes the
+moon in its actual phase, computed from the elongation between the moon and the
+sun -- counting mean synodic months from a known new moon is shorter, but drifts
+up to a day, which is enough to draw the neighbouring phase one night in ten.
+South of the equator the symbol is mirrored, because the lit limb is.
+
+Everything else keeps its weather and merely loses the sun: partly cloudy
+becomes overcast, drizzle and showers become rain. The switch happens on the
+next forecast refresh after sunset rather than at sunset itself.
+
 On first run the place is guessed from the machine's own IANA timezone, which
 names a city: `Europe/London` → `London`, `America/Argentina/Buenos_Aires` →
 `Buenos Aires`. That name is geocoded like any typed one. If it does not
@@ -179,9 +193,17 @@ default must be a fixed literal, so it cannot be "whatever this machine is set
 to" — hence `clocks-seeded`, which distinguishes "never configured" from "the
 user deleted every clock" so an empty list is not silently repopulated.
 
+A clock is stored as intent rather than as the finished string: `clock-entries`
+holds `(zone, show flag, show city, custom text)` and both the panel and the
+preferences window compose the label from it through `lib/timezones.js`. Custom
+text therefore survives switching the name off, which the 1.0.0 format — a
+single label string in `clocks` — could not do. That key is read once by the
+version 2 migration, which reads each old label back into intent, and is
+ignored afterwards.
+
 ### Translations
 
-`gettext-domain` is `lidgets`; `po/lidgets.pot` carries 86 strings.
+`gettext-domain` is `lidgets`; `po/lidgets.pot` carries 98 strings.
 Regenerate it after changing user-visible text:
 
 ```
@@ -191,7 +213,9 @@ xgettext --files-from=po/POTFILES --output=po/lidgets.pot \
 
 `lib/sensors.js` is imported by the preferences process, which has no access to
 the shell's gettext, so its metric titles are marked with a no-op `N_()` and
-wrapped with `_()` at each display site instead.
+wrapped with `_()` at each display site instead. `lib/timezones.js` is shared
+the same way and holds no translatable text: a flag and a city name come from
+tzdata, not from us.
 
 ## Development
 

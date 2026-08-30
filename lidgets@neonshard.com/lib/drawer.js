@@ -70,11 +70,14 @@ export class Drawer {
             this.sync();
             return GLib.SOURCE_REMOVE;
         });
+        /*
+         * Only the fit-measuring mode can change its own mind, but sync() also
+         * re-asserts toggle and drawer state that the shell or another
+         * extension may have changed under us, so run it in every mode.
+         */
         this._recheckId = GLib.timeout_add_seconds(
             GLib.PRIORITY_LOW, RECHECK_SECONDS, () => {
-                // Only the fit-measuring mode can change its mind on its own.
-                if (this._settings.get_string('drawer-mode') === 'auto')
-                    this.sync();
+                this.sync();
                 return GLib.SOURCE_CONTINUE;
             });
     }
@@ -175,6 +178,23 @@ export class Drawer {
         Main.layoutManager.addChrome(this._drawer, {
             affectsStruts: false,
             trackFullscreen: true,
+        });
+
+        /*
+         * The layout manager assigns visibility to every actor it tracks with
+         * trackFullscreen, rather than only hiding it over a fullscreen window:
+         *
+         *     actorData.actor.visible = !(global.window_group.visible &&
+         *                                 monitor && monitor.inFullscreen);
+         *
+         * It runs that on monitors-changed, on session mode changes, and around
+         * the overview, so waking from sleep or swapping monitors undoes our
+         * own hide() and puts the drawer back on screen with _open still false.
+         * Our own state is the authority; put it back away.
+         */
+        this._drawer.connect('notify::visible', () => {
+            if (this._drawer.visible && !this._open)
+                this._drawer.hide();
         });
 
         /*
@@ -452,6 +472,8 @@ export class Drawer {
             this.close();
         else if (this._open)
             this._position();
+        else
+            this._drawer?.hide();
     }
 
     _collapse() {

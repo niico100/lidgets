@@ -39,14 +39,89 @@ const WMO_SYMBOLS = {
     95: '⛈️', 96: '⛈️', 99: '⛈️',
 };
 
+/*
+ * After dark the daytime symbols for these codes still draw a sun, which is
+ * the one thing the sky definitely is not. Clear skies become the moon in its
+ * actual phase; the rest just lose the sun and keep their weather.
+ */
+const NIGHT_SYMBOLS = {
+    2: '☁️',
+    51: '🌧️', 53: '🌧️', 55: '🌧️',
+    80: '🌧️', 81: '🌧️',
+};
+
+const MOON_PHASES = ['🌑', '🌒', '🌓', '🌔', '🌕', '🌖', '🌗', '🌘'];
+
 const HTTP_TIMEOUT_SECONDS = 15;
 const MAX_DISPLAY_CITY_LENGTH = 160;
 
 // Resolved lazily: at module scope the gettext domain is not bound yet.
 const noLocationText = () => _('\u26a0 Set a weather location');
 
-function symbolFor(code) {
-    return WMO_SYMBOLS[code] ?? '❓';
+const DEGREES = Math.PI / 180;
+
+/*
+ * How far round the cycle the moon is, 0 at new and 0.5 at full, from the
+ * elongation between the moon and the sun.
+ *
+ * Counting mean synodic months from a known new moon is the shorter sum, but
+ * the moon's orbit is eccentric enough that it drifts up to a day out -- one
+ * night in ten it would draw the neighbouring phase. These are Meeus' low
+ * precision terms, which hold to a fraction of a degree: far more than eight
+ * symbols can resolve, and cheap enough to redo on every draw.
+ */
+function moonPhaseFraction(date) {
+    const days = (date.getTime() - Date.UTC(2000, 0, 1, 12, 0)) / 86400000;
+
+    const sunAnomaly = (357.528 + 0.9856003 * days) * DEGREES;
+    const sun = 280.460 + 0.9856474 * days +
+        1.915 * Math.sin(sunAnomaly) + 0.020 * Math.sin(2 * sunAnomaly);
+
+    const anomaly = (134.963 + 13.064993 * days) * DEGREES;
+    const elongation = (297.850 + 12.190749 * days) * DEGREES;
+    const argument = (93.272 + 13.229350 * days) * DEGREES;
+    const moon = 218.316 + 13.176396 * days +
+        6.289 * Math.sin(anomaly) +
+        1.274 * Math.sin(2 * elongation - anomaly) +
+        0.658 * Math.sin(2 * elongation) +
+        0.214 * Math.sin(2 * anomaly) -
+        0.186 * Math.sin(sunAnomaly) -
+        0.114 * Math.sin(2 * argument);
+
+    const phase = (moon - sun) % 360;
+    return (phase < 0 ? phase + 360 : phase) / 360;
+}
+
+/*
+ * The moon keeps its phase but not its handedness: south of the equator the
+ * lit limb is on the other side, so every symbol except new and full is its
+ * own mirror image.
+ */
+function moonSymbol(date, latitude) {
+    const phase = Math.round(moonPhaseFraction(date) * 8) % 8;
+    const mirrored = latitude < 0 && phase !== 0 && phase !== 4
+        ? 8 - phase
+        : phase;
+    return MOON_PHASES[mirrored];
+}
+
+function symbolFor(code, {night = false, latitude = 0, when = null} = {}) {
+    if (!night)
+        return WMO_SYMBOLS[code] ?? '❓';
+    // 0 clear, 1 mainly clear: enough sky to see which moon is up there.
+    if (code === 0 || code === 1)
+        return moonSymbol(when ?? new Date(), latitude);
+    return NIGHT_SYMBOLS[code] ?? WMO_SYMBOLS[code] ?? '❓';
+}
+
+/*
+ * Open-Meteo timestamps carry no zone -- they are already local to the
+ * forecast -- so this reads them as local time, which is close enough for a
+ * phase that moves one symbol every three and a half days.
+ */
+function forecastTime(timestamp) {
+    const ms = Date.parse(timestamp);
+    return Number.isFinite(ms) ? new Date(ms) : new Date();
 }
 
 export const WeatherIndicator = GObject.registerClass(
@@ -197,8 +272,8 @@ class WeatherIndicator extends PanelMenu.Button {
         const url =
             `https://api.open-meteo.com/v1/forecast?latitude=${this._lat}&longitude=${this._lon}` +
             '&models=best_match' +
-            '&current=temperature_2m,weather_code' +
-            '&hourly=temperature_2m,precipitation_probability,weather_code' +
+            '&current=temperature_2m,weather_code,is_day' +
+            '&hourly=temperature_2m,precipitation_probability,weather_code,is_day' +
             '&daily=temperature_2m_max,temperature_2m_min' +
             (imperial ? '&temperature_unit=fahrenheit' : '') +
             '&forecast_days=2&timezone=auto';
@@ -217,6 +292,17 @@ class WeatherIndicator extends PanelMenu.Button {
     }
 
     /* ------------------------------------------------------------------- ui */
+
+    /*
+     * is_day is missing if a model does not report it, in which case this
+     * reads as daytime and the symbols are exactly what they were before.
+     */
+    _symbolNow() {
+        return symbolFor(this._forecast.current.weather_code, {
+            night: this._forecast.current.is_day === 0,
+            latitude: this._lat ?? 0,
+        });
+    }
 
     _degreeSuffix() {
         return this._settings.get_string('weather-units') === 'imperial' ? '°F' : '°C';
@@ -246,7 +332,7 @@ class WeatherIndicator extends PanelMenu.Button {
         const low = Math.round(data.daily.temperature_2m_min[0]);
 
         this._label.text =
-            `${symbolFor(data.current.weather_code)} ${current}°  ` +
+            `${this._symbolNow()} ${current}°  ` +
             `${rainChance}%🌧  H:${high}° L:${low}°`;
 
         this._buildMenu();
@@ -268,7 +354,7 @@ class WeatherIndicator extends PanelMenu.Button {
         const low = Math.round(data.daily.temperature_2m_min[0]);
 
         const heading = new PopupMenu.PopupMenuItem(
-            `${symbolFor(data.current.weather_code)}  ${current}${unit}   Today ${high}° / ${low}°`,
+            `${this._symbolNow()}  ${current}${unit}   Today ${high}° / ${low}°`,
             {reactive: false, can_focus: false});
         heading.label.style = 'font-weight: bold;';
         this.menu.addMenuItem(heading);
@@ -308,7 +394,11 @@ class WeatherIndicator extends PanelMenu.Button {
             const temperature = Math.round(data.hourly.temperature_2m[i]);
             const rain = data.hourly.precipitation_probability[i] ?? 0;
             forecastBox.add_child(new St.Label({
-                text: `${hour}    ${symbolFor(data.hourly.weather_code[i])}  ` +
+                text: `${hour}    ${symbolFor(data.hourly.weather_code[i], {
+                    night: data.hourly.is_day?.[i] === 0,
+                    latitude: this._lat ?? 0,
+                    when: forecastTime(timestamp),
+                })}  ` +
                       `${temperature}${unit}       Rain ${rain}%`,
                 style: 'padding: 3px 12px;',
             }));

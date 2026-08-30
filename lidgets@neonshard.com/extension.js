@@ -19,6 +19,7 @@ import {Drawer} from './lib/drawer.js';
 import {
     log, monotonicMs, warnRateLimited,
 } from './lib/diagnostics.js';
+import {clockEntryFromLabel, makeClockEntry} from './lib/timezones.js';
 
 /*
  * Widgets are added left to right in this order. The role is what claims the
@@ -31,7 +32,7 @@ const WIDGETS = [
 ];
 
 const LEGACY_SCHEMA = 'org.gnome.shell.extensions.panel-hub';
-const SETTINGS_MIGRATION_VERSION = 1;
+const SETTINGS_MIGRATION_VERSION = 2;
 const SLOW_REBUILD_MS = 100;
 const MIGRATED_KEYS = [
     'master-enabled', 'panel-box', 'panel-index',
@@ -76,27 +77,58 @@ export default class LidgetsExtension extends Extension {
     }
 
     /*
+     * Each step records itself only once it has finished, so an interrupted
+     * upgrade resumes where it stopped and a completed one is never replayed
+     * -- replaying step 1 would overwrite current settings with whatever the
+     * abandoned panel-hub store still holds.
+     */
+    _migrateSettings() {
+        let version = this._settings.get_uint('settings-migration-version');
+        if (version >= SETTINGS_MIGRATION_VERSION)
+            return;
+
+        try {
+            if (version < 1) {
+                this._migrateFromPanelHub();
+                this._settings.set_uint('settings-migration-version', 1);
+                version = 1;
+            }
+            if (version < 2) {
+                this._migrateClockLabels();
+                this._settings.set_uint('settings-migration-version', 2);
+            }
+        } catch (e) {
+            console.error(`[Lidgets] Could not migrate settings from ` +
+                `version ${version}: ${e.message}`);
+        }
+    }
+
+    /*
      * Version 1.0.0 used the panel-hub identity. Copy only explicit user
      * values, leaving new defaults intact, then never touch the legacy store
      * again. The legacy schema ships solely to make this one-time read work.
      */
-    _migrateSettings() {
-        if (this._settings.get_uint('settings-migration-version') >=
-            SETTINGS_MIGRATION_VERSION)
+    _migrateFromPanelHub() {
+        const legacy = this.getSettings(LEGACY_SCHEMA);
+        for (const key of MIGRATED_KEYS) {
+            const value = legacy.get_user_value(key);
+            if (value !== null)
+                this._settings.set_value(key, value);
+        }
+    }
+
+    /*
+     * Clocks used to be stored as the finished label string, which left custom
+     * text nowhere to live once the city name was switched off. Read those
+     * labels back into intent -- zone, flag, city, custom text -- once.
+     */
+    _migrateClockLabels() {
+        const clocks = this._settings.get_value('clocks').deepUnpack();
+        if (clocks.length === 0)
             return;
 
-        try {
-            const legacy = this.getSettings(LEGACY_SCHEMA);
-            for (const key of MIGRATED_KEYS) {
-                const value = legacy.get_user_value(key);
-                if (value !== null)
-                    this._settings.set_value(key, value);
-            }
-            this._settings.set_uint(
-                'settings-migration-version', SETTINGS_MIGRATION_VERSION);
-        } catch (e) {
-            console.error(`[Lidgets] Could not migrate legacy settings: ${e.message}`);
-        }
+        this._settings.set_value('clock-entries', new GLib.Variant('a(sbbs)',
+            clocks.map(([label, zone]) => clockEntryFromLabel(label, zone))));
     }
 
     disable() {
@@ -130,10 +162,8 @@ export default class LidgetsExtension extends Extension {
         }
 
         if (zone) {
-            // "America/Los_Angeles" -> "Los Angeles"
-            const label = zone.split('/').pop().replace(/_/g, ' ');
-            this._settings.set_value('clocks',
-                new GLib.Variant('a(ss)', [[label, zone]]));
+            this._settings.set_value('clock-entries',
+                new GLib.Variant('a(sbbs)', [makeClockEntry(zone)]));
         }
 
         this._settings.set_boolean('clocks-seeded', true);

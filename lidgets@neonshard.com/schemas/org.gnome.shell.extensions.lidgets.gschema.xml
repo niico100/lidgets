@@ -59,12 +59,21 @@
       <default>true</default>
       <summary>Show world clocks</summary>
     </key>
-    <key name="clocks" type="a(ss)">
+    <key name="clock-entries" type="a(sbbs)">
       <default>[]</default>
       <summary>Clocks to display</summary>
-      <description>List of (label, IANA timezone) pairs, in display order.
-      Seeded once from the machine's own timezone on first run; a static
-      default cannot do that, hence clocks-seeded below.</description>
+      <description>List of (IANA timezone, show flag, show city, custom text)
+      tuples, in display order. Seeded once from the machine's own timezone on
+      first run; a static default cannot do that, hence clocks-seeded below.
+      The displayed label is composed from these, so custom text outlives
+      switching the city name off.</description>
+    </key>
+    <key name="clocks" type="a(ss)">
+      <default>[]</default>
+      <summary>Clocks to display (superseded)</summary>
+      <description>The 1.0.0 format: (label, IANA timezone) pairs, in display
+      order. Read once by the version 2 migration into clock-entries and
+      ignored thereafter. Kept in the schema only so that read still works.</description>
     </key>
     <key name="clocks-seeded" type="b">
       <default>false</default>

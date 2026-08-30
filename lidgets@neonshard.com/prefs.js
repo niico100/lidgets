@@ -16,6 +16,9 @@ import {ExtensionPreferences, gettext as _}
 
 import {Sensors, listMountPoints} from './lib/sensors.js';
 import {geocode, makeJsonFetcher, describePlace} from './lib/geocode.js';
+import {
+    clockLabel, makeClockEntry, timezoneFlag, timezoneLocality,
+} from './lib/timezones.js';
 
 /*
  * Long enough that ordinary typing produces one request rather than one per
@@ -48,41 +51,6 @@ const FALLBACK_TIMEZONES = [
     'Australia/Sydney', 'Pacific/Auckland',
 ];
 
-let timezoneCountries;
-
-function loadTimezoneCountries() {
-    const countries = new Map();
-    for (const path of ['/usr/share/zoneinfo/zone1970.tab',
-        '/usr/share/zoneinfo/zone.tab']) {
-        try {
-            const [ok, bytes] = GLib.file_get_contents(path);
-            if (!ok)
-                continue;
-
-            for (const line of new TextDecoder('utf-8').decode(bytes).split('\n')) {
-                if (!line || line.startsWith('#'))
-                    continue;
-                const [countryCodes, , zone] = line.split('\t');
-                if (zone && !countries.has(zone))
-                    countries.set(zone, countryCodes.split(',')[0]);
-            }
-            if (countries.size > 0)
-                break;
-        } catch {
-            // A timezone label still works when the optional tzdata table is absent.
-        }
-    }
-    return countries;
-}
-
-function countryFlag(countryCode) {
-    if (!/^[A-Z]{2}$/.test(countryCode ?? ''))
-        return '';
-    return [...countryCode]
-        .map(letter => String.fromCodePoint(letter.codePointAt(0) + 127397))
-        .join('');
-}
-
 function allTimezones() {
     let zones;
     try {
@@ -95,25 +63,6 @@ function allTimezones() {
 
     return [...zones].sort((left, right) =>
         timezoneSearchLabel(left).localeCompare(timezoneSearchLabel(right)));
-}
-
-function timezoneLocality(zone) {
-    return zone.split('/').at(-1).replaceAll('_', ' ');
-}
-
-function automaticTimezoneLabel(zone) {
-    timezoneCountries ??= loadTimezoneCountries();
-    const flag = timezoneFlag(zone);
-    return `${flag ? `${flag} ` : ''}${timezoneLocality(zone)}`;
-}
-
-function timezoneFlag(zone) {
-    timezoneCountries ??= loadTimezoneCountries();
-    return countryFlag(timezoneCountries.get(zone));
-}
-
-function clockLabelShowsCity(label, zone) {
-    return label.trim() !== timezoneFlag(zone);
 }
 
 /*
@@ -369,7 +318,7 @@ export default class LidgetsPreferences extends ExtensionPreferences {
 
         const list = new Adw.PreferencesGroup({
             title: _('Clocks'),
-            description: _('The label is free text, so a flag emoji, a city name, or nothing at all all work.'),
+            description: _('Each clock shows its country flag, a name, or both. The name is the city this time zone is named after, unless you give the clock custom text of your own.'),
         });
         page.add(list);
         settings.bind('clocks-enabled', list, 'sensitive',
@@ -397,23 +346,23 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         };
 
         /*
-         * Rows are rebuilt only on add, remove and reorder. Editing a label
+         * Rows are rebuilt only on add, remove and reorder. Editing a clock
          * writes straight to settings without a rebuild, so the entry keeps
          * focus while you type.
          */
         let rows = [];
-        const clocks = settings.get_value('clocks').deepUnpack();
+        const entries = settings.get_value('clock-entries').deepUnpack();
 
         const save = () => settings.set_value(
-            'clocks', new GLib.Variant('a(ss)', clocks));
+            'clock-entries', new GLib.Variant('a(sbbs)', entries));
 
         const rebuild = () => {
             for (const row of rows)
                 list.remove(row);
             rows = [];
-            updateAddButton(clocks.length);
+            updateAddButton(entries.length);
 
-            if (clocks.length === 0) {
+            if (entries.length === 0) {
                 const empty = new Adw.ActionRow({
                     title: _('No clocks'),
                     subtitle: _('Use + to add one'),
@@ -423,33 +372,33 @@ export default class LidgetsPreferences extends ExtensionPreferences {
                 return;
             }
 
-            clocks.forEach((clock, index) => {
+            entries.forEach((entry, index) => {
                 const row = new Adw.ExpanderRow({
-                    title: clock[0] || clock[1],
-                    subtitle: clock[1],
+                    title: clockLabel(entry) || entry[0],
+                    subtitle: entry[0],
                 });
 
                 const up = makeFlatButton('go-up-symbolic', _('Move earlier'));
                 up.sensitive = index > 0;
                 up.connect('clicked', () => {
-                    [clocks[index - 1], clocks[index]] =
-                        [clocks[index], clocks[index - 1]];
+                    [entries[index - 1], entries[index]] =
+                        [entries[index], entries[index - 1]];
                     save();
                     rebuild();
                 });
 
                 const down = makeFlatButton('go-down-symbolic', _('Move later'));
-                down.sensitive = index < clocks.length - 1;
+                down.sensitive = index < entries.length - 1;
                 down.connect('clicked', () => {
-                    [clocks[index + 1], clocks[index]] =
-                        [clocks[index], clocks[index + 1]];
+                    [entries[index + 1], entries[index]] =
+                        [entries[index], entries[index + 1]];
                     save();
                     rebuild();
                 });
 
                 const remove = makeFlatButton('user-trash-symbolic', _('Remove this clock'));
                 remove.connect('clicked', () => {
-                    clocks.splice(index, 1);
+                    entries.splice(index, 1);
                     save();
                     rebuild();
                 });
@@ -458,53 +407,59 @@ export default class LidgetsPreferences extends ExtensionPreferences {
                 row.add_suffix(down);
                 row.add_suffix(remove);
 
-                const label = new Adw.EntryRow({title: _('Label')});
-                label.text = clock[0];
-                const showCity = new Adw.SwitchRow({
-                    title: _('Show city'),
-                    subtitle: _('Keep only the country flag when off'),
-                });
-                showCity.active = clockLabelShowsCity(clock[0], clock[1]);
-                let syncingShowCity = false;
-                label.connect('changed', () => {
-                    clocks[index][0] = label.text;
-                    row.title = label.text || clocks[index][1];
-                    syncingShowCity = true;
-                    showCity.active = clockLabelShowsCity(label.text, clocks[index][1]);
-                    syncingShowCity = false;
+                const showFlag = new Adw.SwitchRow({title: _('Show flag')});
+                const showCity = new Adw.SwitchRow({title: _('Show name')});
+                const customText = new Adw.EntryRow({title: _('Custom text')});
+                showFlag.active = entries[index][1];
+                showCity.active = entries[index][2];
+                customText.text = entries[index][3];
+
+                /*
+                 * Every control owns one field of the entry and nothing else
+                 * writes back to it, so the row has no way to talk itself into
+                 * a loop. Only the summary -- which is what the panel will
+                 * actually show -- is recomputed from all of them.
+                 */
+                const refresh = () => {
+                    const zone = entries[index][0];
+                    const flag = timezoneFlag(zone);
+                    row.title = clockLabel(entries[index]) || zone;
+                    showFlag.sensitive = flag !== '';
+                    showFlag.subtitle = flag === ''
+                        ? _('No flag is known for this time zone')
+                        : `${_('The country flag for this time zone')}  ${flag}`;
+                    showCity.subtitle = entries[index][3].trim() === ''
+                        ? `${_('The city name')}:  ${timezoneLocality(zone)}`
+                        : _('Your custom text, below');
+                };
+                refresh();
+
+                showFlag.connect('notify::active', () => {
+                    entries[index][1] = showFlag.active;
+                    refresh();
                     save();
                 });
-                row.add_row(label);
-
                 showCity.connect('notify::active', () => {
-                    if (syncingShowCity)
-                        return;
-                    label.text = showCity.active
-                        ? automaticTimezoneLabel(clocks[index][1])
-                        : timezoneFlag(clocks[index][1]);
+                    entries[index][2] = showCity.active;
+                    refresh();
+                    save();
                 });
-                row.add_row(showCity);
+                // Kept whether or not the name is currently shown, so turning
+                // the name back on returns the text rather than the city.
+                customText.connect('changed', () => {
+                    entries[index][3] = customText.text;
+                    refresh();
+                    save();
+                });
 
-                row.add_row(makeTimezoneRow(timezones, clock[1], zone => {
-                    const oldZone = clocks[index][1];
-                    const showedCity = clockLabelShowsCity(
-                        clocks[index][0], oldZone);
-                    const labelWasAutomatic =
-                        clocks[index][0] === timezoneLocality(oldZone) ||
-                        clocks[index][0] === automaticTimezoneLabel(oldZone) ||
-                        clocks[index][0] === timezoneFlag(oldZone);
-                    clocks[index][1] = zone;
+                row.add_row(showFlag);
+                row.add_row(showCity);
+                row.add_row(customText);
+
+                row.add_row(makeTimezoneRow(timezones, entry[0], zone => {
+                    entries[index][0] = zone;
                     row.subtitle = zone;
-                    if (labelWasAutomatic) {
-                        const automaticLabel = showedCity
-                            ? automaticTimezoneLabel(zone)
-                            : timezoneFlag(zone);
-                        clocks[index][0] = automaticLabel;
-                        label.text = automaticLabel;
-                        row.title = automaticLabel;
-                    } else if (!clocks[index][0]) {
-                        row.title = zone;
-                    }
+                    refresh();
                     save();
                 }));
 
@@ -514,16 +469,15 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         };
 
         addButton.connect('clicked', () => {
-            if (clocks.length >= MAX_CLOCKS)
+            if (entries.length >= MAX_CLOCKS)
                 return;
 
             // Start from the machine's own zone: more often right than UTC,
             // and it gives the new row a meaningful title straight away.
-            const zone = localTimezone();
-            clocks.push([automaticTimezoneLabel(zone), zone]);
+            entries.push(makeClockEntry(localTimezone()));
             save();
             rebuild();
-            // Open the new row so the label and zone are ready to edit.
+            // Open the new row so the clock is ready to edit.
             rows[rows.length - 1].expanded = true;
         });
 
