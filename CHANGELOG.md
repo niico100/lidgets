@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Add optional Codex and Claude Code widgets showing subscription allowance
+  remaining, reset times, and stale readings. Include a Claude Code status-line
+  connection that preserves the existing command.
 - Rename the extension identity from Panel Hub to Lidgets, with a one-time
   migration for existing settings.
 - Allow clock separators to be hidden while retaining spacing between clocks.

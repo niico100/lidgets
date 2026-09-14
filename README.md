@@ -1,7 +1,8 @@
 # Lidgets
 
 One configurable GNOME Shell extension for world clocks, weather, live system
-metrics, a remote-desktop warning, and a panel drawer. Lidgets currently
+metrics, optional Codex and Claude Code usage limits, a remote-desktop warning,
+and a panel drawer. Lidgets currently
 supports GNOME Shell 50.
 
 ## Installation
@@ -31,7 +32,7 @@ gnome-extensions prefs lidgets@neonshard.com
 
 ### Build from source
 
-The build requires `gnome-extensions`, Node.js, `xmllint`, and
+The build requires `gnome-extensions`, Python 3, Node.js, `xmllint`, and
 `glib-compile-schemas`:
 
 ```sh
@@ -46,8 +47,48 @@ gnome-extensions install --force dist/lidgets@neonshard.com.shell-extension.zip
 Lidgets contains no telemetry. When weather is enabled it sends the configured
 coordinates to Open-Meteo for forecasts. Searching for a location in
 preferences sends the entered place name to Open-Meteo's geocoding service.
-All other widgets use local system data. NVIDIA metrics optionally invoke the
+The optional Codex widget invokes the locally installed Codex CLI to request
+account quota data from OpenAI using its existing login. The optional Claude
+widget reads a local cache written by the Claude Code status-line connection.
+Only usage percentages, window lengths, and reset/update timestamps are cached;
+Lidgets does not read or store API keys, authentication tokens, or conversations.
+Other widgets use local system data. NVIDIA metrics optionally invoke the
 locally installed `nvidia-smi` command.
+
+### Codex and Claude Code limits
+
+Enable either widget separately under **Preferences → General → Widgets**.
+Both are off by default and participate in the existing panel drawer. Python 3
+is required. Example: `Codex 5h: 72% · 1w: 41%` means **allowance remaining**.
+The dropdown shows reset times, the last update, and a Refresh action.
+
+- **Codex:** install Codex CLI and sign in with your subscription account.
+  Lidgets finds `codex` on PATH or at `~/.local/bin/codex`, then reads its
+  documented `account/rateLimits/read` interface every minute. Window labels
+  follow the account's reported durations; missing windows are not invented.
+- **Claude Code:** click **Connect Claude Code**, restart Claude Code, and send
+  a prompt. This wraps the command in `~/.claude/settings.json` (or
+  `$CLAUDE_CONFIG_DIR/settings.json`), preserving the existing status-line
+  command and its output. The wrapper writes quota fields to
+  `$XDG_CACHE_HOME/lidgets/claude-usage.json` (default `~/.cache/lidgets/`).
+  Lidgets checks that file every minute; Refresh rereads the cache and does
+  not contact Claude. A compatible Claude Code version and subscription that
+  reports `rate_limits.five_hour` / `rate_limits.seven_day` are required.
+  Project-specific status-line overrides take precedence over this connection.
+
+An asterisk marks readings older than five minutes or a failed refresh. Once
+a reported reset passes, that window shows `—` until new usage is received;
+Lidgets never assumes it has reset to 100%. API-key-only accounts may report
+no subscription limits. Claude data does not refresh while Claude Code is idle.
+
+To remove the Claude connection and restore the original status-line command:
+
+```sh
+python3 ~/.local/share/gnome-shell/extensions/lidgets@neonshard.com/lib/usage-helper.py remove-claude
+```
+
+Interfaces: [Codex App Server](https://learn.chatgpt.com/docs/app-server) and
+[Claude Code status line](https://code.claude.com/docs/en/statusline).
 
 ## lidgets@neonshard.com
 
@@ -203,7 +244,7 @@ ignored afterwards.
 
 ### Translations
 
-`gettext-domain` is `lidgets`; `po/lidgets.pot` carries 98 strings.
+`gettext-domain` is `lidgets`; `po/lidgets.pot` carries the translatable strings.
 Regenerate it after changing user-visible text:
 
 ```

@@ -176,6 +176,8 @@ export default class LidgetsPreferences extends ExtensionPreferences {
             ['clocks-enabled', _('World clocks'), _('Times for the zones you follow')],
             ['weather-enabled', _('Weather'), _('Current conditions and an 8-hour forecast')],
             ['metrics-enabled', _('System metrics'), _('CPU, GPU, memory, disk and more')],
+            ['codex-enabled', _('Codex limits'), _('Subscription allowance remaining; requires Codex CLI login')],
+            ['claude-enabled', _('Claude Code limits'), _('5-hour and weekly allowance remaining; connect below')],
             ['remote-enabled', _('Remote desktop banner'),
                 _('A red warning while RDP or VNC is accepting connections')],
         ]) {
@@ -186,6 +188,36 @@ export default class LidgetsPreferences extends ExtensionPreferences {
                 Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.NO_SENSITIVITY);
             widgets.add(row);
         }
+
+        const connection = new Adw.ActionRow({
+            title: _('Claude Code connection'),
+            subtitle: _('Shares usage with Lidgets while preserving your existing status line. Restart Claude Code after connecting.'),
+        });
+        const connect = new Gtk.Button({label: _('Connect Claude Code'), valign: Gtk.Align.CENTER});
+        connection.add_suffix(connect);
+        connect.connect('clicked', () => {
+            connect.sensitive = false;
+            try {
+                const process = Gio.Subprocess.new(
+                    ['python3', `${this.path}/lib/usage-helper.py`, 'install-claude'],
+                    Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE);
+                process.communicate_utf8_async(null, null, (source, result) => {
+                    try {
+                        const [, stdout] = source.communicate_utf8_finish(result);
+                        connection.subtitle = JSON.parse(stdout).ok
+                            ? _('Connected. Restart Claude Code and send a prompt to populate usage.')
+                            : _('Could not connect. Check that Claude settings.json is valid and writable.');
+                    } catch {
+                        connection.subtitle = _('Could not connect Claude Code.');
+                    }
+                    connect.sensitive = true;
+                });
+            } catch {
+                connection.subtitle = _('Python 3 is required to connect Claude Code.');
+                connect.sensitive = true;
+            }
+        });
+        widgets.add(connection);
 
         const placement = new Adw.PreferencesGroup({title: _('Placement')});
         page.add(placement);

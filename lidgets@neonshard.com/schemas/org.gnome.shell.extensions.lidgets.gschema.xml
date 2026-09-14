@@ -26,6 +26,15 @@
       <summary>Position within the panel box</summary>
     </key>
 
+    <key name="codex-enabled" type="b">
+      <default>false</default>
+      <summary>Show Codex allowance remaining</summary>
+    </key>
+    <key name="claude-enabled" type="b">
+      <default>false</default>
+      <summary>Show Claude Code allowance remaining</summary>
+    </key>
+
     <!-- Drawer -->
     <key name="drawer-mode" type="s">
       <default>'manual'</default>

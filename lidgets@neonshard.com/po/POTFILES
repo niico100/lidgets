@@ -6,3 +6,4 @@ lib/metrics.js
 lib/remote.js
 lib/sensors.js
 lib/weather.js
+lib/usage.js
