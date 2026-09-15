@@ -87,7 +87,7 @@ class UsageIndicator extends PanelMenu.Button {
     _render() {
         const now = Date.now() / 1000;
         const snapshot = this._snapshot;
-        const stale = Boolean(this._error) || (snapshot && (now - snapshot.updatedAt > 300 ||
+        const stale = Boolean(this._error) || (snapshot && (snapshot.incomplete || now - snapshot.updatedAt > 300 ||
             snapshot.windows.some(w => w.resetsAt && w.resetsAt <= now)));
         const windows = (snapshot?.windows ?? []).filter(w =>
             Number.isFinite(w.remaining) && w.remaining >= 0 && w.remaining <= 100 &&

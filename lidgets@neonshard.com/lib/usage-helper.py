@@ -54,6 +54,22 @@ def claude_snapshot(data):
     return {'windows': windows, 'updatedAt': time.time()}
 
 
+def cache_claude_snapshot(data):
+    path = cache_path()
+    snapshot = claude_snapshot(data)
+    # Status-line updates can omit quotas between API responses. Keep the
+    # last reported reading, without advancing its timestamp or claiming it
+    # describes a fresh response. Explicitly empty limits still clear it.
+    if 'rate_limits' not in data and path.exists():
+        try:
+            previous = json.loads(path.read_text())
+            if isinstance(previous, dict) and previous.get('windows'):
+                snapshot = {**previous, 'incomplete': True}
+        except (OSError, ValueError):
+            pass
+    atomic_json(path, snapshot)
+
+
 def codex_snapshot():
     # Desktop sessions often lack ~/.local/bin in PATH.
     executable = shutil.which('codex')
@@ -159,8 +175,7 @@ def main():
     if args.action == 'claude-statusline':
         raw = sys.stdin.read()
         try:
-            # Write empty snapshots too: never retain another account's old limits.
-            atomic_json(cache_path(), claude_snapshot(json.loads(raw)))
+            cache_claude_snapshot(json.loads(raw))
         except (OSError, ValueError, TypeError, AttributeError):
             pass  # A widget must never break the user's terminal status line.
         if args.original:

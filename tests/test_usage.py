@@ -49,11 +49,30 @@ class UsageTests(unittest.TestCase):
             self.assertEqual(json.loads(cache.read_text())['windows'][0]['remaining'], 60)
             self.assertNotIn('secret_test_field', cache.read_text())
             self.assertEqual(cache.stat().st_mode & 0o777, 0o600)
+            updated_at = json.loads(cache.read_text())['updatedAt']
             subprocess.run(first['statusLine']['command'], shell=True, text=True,
                            input='{}', capture_output=True, env=env, check=True)
+            cached = json.loads(cache.read_text())
+            self.assertEqual(cached['windows'][0]['remaining'], 60)
+            self.assertEqual(cached['updatedAt'], updated_at)
+            self.assertTrue(cached['incomplete'])
+            subprocess.run(first['statusLine']['command'], shell=True, text=True,
+                           input='{"rate_limits": {}}', capture_output=True, env=env, check=True)
             self.assertEqual(json.loads(cache.read_text())['windows'], [])
             usage.configure_claude(remove=True)
             self.assertEqual(json.loads(path.read_text()), before)
+
+    def test_fresh_claude_usage_replaces_incomplete_cache(self):
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'XDG_CACHE_HOME': directory}):
+            usage.cache_claude_snapshot({'rate_limits': {
+                'five_hour': {'used_percentage': 23},
+                'seven_day': {'used_percentage': 25}}})
+            usage.cache_claude_snapshot({})
+            self.assertTrue(json.loads(usage.cache_path().read_text())['incomplete'])
+            usage.cache_claude_snapshot({'rate_limits': {'five_hour': {'used_percentage': 30}}})
+            cached = json.loads(usage.cache_path().read_text())
+            self.assertNotIn('incomplete', cached)
+            self.assertEqual([w['remaining'] for w in cached['windows']], [70])
 
     def test_invalid_config_is_not_overwritten(self):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'CLAUDE_CONFIG_DIR': directory}):

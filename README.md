@@ -79,7 +79,11 @@ The dropdown shows reset times, the last update, and a Refresh action.
 
 An asterisk marks readings older than five minutes or a failed refresh. Once
 a reported reset passes, that window shows `—` until new usage is received;
-Lidgets never assumes it has reset to 100%. API-key-only accounts may report
+Lidgets never assumes it has reset to 100%. Claude status-line updates that
+omit quota fields retain the last reported values with their original timestamp
+and a stale marker; explicitly empty limits clear them. These cached values
+may belong to a previously used account until fresh limits arrive.
+API-key-only accounts may report
 no subscription limits. Claude data does not refresh while Claude Code is idle.
 
 To remove the Claude connection and restore the original status-line command:
