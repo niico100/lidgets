@@ -59,7 +59,8 @@ locally installed `nvidia-smi` command.
 
 Enable either widget separately under **Preferences → General → Widgets**.
 Both are off by default and participate in the existing panel drawer. Python 3
-is required. Example: `Codex 5h: 72% · 1w: 41%` means **allowance remaining**.
+is required. Example: `Codex (72/41)` means **allowance remaining**:
+72% for the 5-hour window and 41% for the weekly window.
 The dropdown shows reset times, the last update, and a Refresh action.
 
 - **Codex:** install Codex CLI and sign in with your subscription account.
