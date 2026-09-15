@@ -95,17 +95,11 @@ class UsageIndicator extends PanelMenu.Button {
         const period = w => w.minutes === 300 ? '5h' : w.minutes === 10080 ? '1w' : `${w.minutes}m`;
         // Passing a reset does not prove a new allowance is available.
         const remaining = w => w.resetsAt && w.resetsAt <= now ? '—' : `${Math.floor(w.remaining)}%`;
-        let label;
-        if (this._provider === 'codex') {
-            const values = [300, 10080].map(minutes => {
-                const window = windows.find(w => w.minutes === minutes);
-                return window ? remaining(window).replace('%', '') : '—';
-            });
-            label = `${this._title} (${values.join('/')})`;
-        } else {
-            label = `${this._title} ${windows.length
-                ? windows.map(w => `${period(w)}: ${remaining(w)}`).join(' · ') : '—'}`;
-        }
+        const values = [300, 10080].map(minutes => {
+            const window = windows.find(w => w.minutes === minutes);
+            return window ? remaining(window).replace('%', '') : '—';
+        });
+        const label = `${this._title} (${values.join('/')})`;
         this._label.text = `${label}${stale ? ' *' : ''}`;
         this.menu.removeAll();
         this.menu.addMenuItem(new PopupMenu.PopupMenuItem(_('Allowance remaining'), {reactive: false}));
