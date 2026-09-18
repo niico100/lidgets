@@ -13,6 +13,7 @@ class UsageIndicator extends PanelMenu.Button {
         const title = provider === 'codex' ? 'Codex' : 'Claude';
         super._init(0.0, title, false);
         this._provider = provider;
+        this._settings = settings;
         this._title = title;
         this._path = path;
         this._dead = false;
@@ -28,8 +29,10 @@ class UsageIndicator extends PanelMenu.Button {
             if (open)
                 this._render();
         });
+        this._settingsId = settings.connect('changed::usage-show-resets', () => this._render());
         this.connect('destroy', () => {
             this._dead = true;
+            settings.disconnect(this._settingsId);
             GLib.source_remove(this._timer);
             if (this._deadline)
                 GLib.source_remove(this._deadline);
@@ -95,11 +98,16 @@ class UsageIndicator extends PanelMenu.Button {
         const period = w => w.minutes === 300 ? '5h' : w.minutes === 10080 ? '1w' : `${w.minutes}m`;
         // Passing a reset does not prove a new allowance is available.
         const remaining = w => w.resetsAt && w.resetsAt <= now ? '—' : `${Math.floor(w.remaining)}%`;
-        const values = [300, 10080].map(minutes => {
-            const window = windows.find(w => w.minutes === minutes);
-            return window ? remaining(window).replace('%', '') : '—';
-        });
-        const label = `${this._title} (${values.join('/')})`;
+        const resetText = (w, format) => {
+            if (!w?.resetsAt || w.resetsAt <= now)
+                return '—';
+            return GLib.DateTime.new_from_unix_local(Math.floor(w.resetsAt))?.format(format) ?? '—';
+        };
+        const [fiveHour, weekly] = [300, 10080].map(minutes => windows.find(w => w.minutes === minutes));
+        const values = [fiveHour, weekly].map(w => w ? remaining(w).replace('%', '') : '—');
+        const resets = this._settings.get_boolean('usage-show-resets')
+            ? ` · ${resetText(fiveHour, '%H:%M')}/${resetText(weekly, '%a %H:%M')}` : '';
+        const label = `${this._title} (${values.join('/')}${resets})`;
         this._label.text = `${label}${stale ? ' *' : ''}`;
         this.menu.removeAll();
         this.menu.addMenuItem(new PopupMenu.PopupMenuItem(_('Allowance remaining'), {reactive: false}));

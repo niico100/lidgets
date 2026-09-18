@@ -5,6 +5,8 @@
 - Add optional Codex and Claude Code widgets showing subscription allowance
   remaining, reset times, and stale readings. Include a Claude Code status-line
   connection that preserves the existing command.
+- Add an option to show the 5-hour reset time and weekly reset day and time in
+  the Codex and Claude Code panel labels.
 - Rename the extension identity from Panel Hub to Lidgets, with a one-time
   migration for existing settings.
 - Allow clock separators to be hidden while retaining spacing between clocks.

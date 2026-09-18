@@ -62,6 +62,9 @@ Both are off by default and participate in the existing panel drawer. Python 3
 is required. Examples: `Codex (72/41)` and `Claude (72/41)` mean **allowance remaining**:
 72% for the 5-hour window and 41% for the weekly window.
 The dropdown shows reset times, the last update, and a Refresh action.
+**Show limit reset times** adds them to the label as well, e.g.
+`Claude (72/41 · 17:30/Mon 09:00)`: the 5-hour window resets at 17:30 and the
+weekly window on Monday at 09:00.
 
 - **Codex:** install Codex CLI and sign in with your subscription account.
   Lidgets finds `codex` on PATH or at `~/.local/bin/codex`, then reads its

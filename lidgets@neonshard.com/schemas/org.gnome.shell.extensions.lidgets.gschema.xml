@@ -34,6 +34,11 @@
       <default>false</default>
       <summary>Show Claude Code allowance remaining</summary>
     </key>
+    <key name="usage-show-resets" type="b">
+      <default>false</default>
+      <summary>Show quota reset times in the panel</summary>
+      <description>Append the 5-hour reset time and the weekly reset day and time to the Codex and Claude Code panel labels.</description>
+    </key>
 
     <!-- Drawer -->
     <key name="drawer-mode" type="s">

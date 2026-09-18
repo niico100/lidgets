@@ -178,6 +178,8 @@ export default class LidgetsPreferences extends ExtensionPreferences {
             ['metrics-enabled', _('System metrics'), _('CPU, GPU, memory, disk and more')],
             ['codex-enabled', _('Codex limits'), _('Subscription allowance remaining; requires Codex CLI login')],
             ['claude-enabled', _('Claude Code limits'), _('5-hour and weekly allowance remaining; connect below')],
+            ['usage-show-resets', _('Show limit reset times'),
+                _('Add the 5-hour reset time and weekly reset day to the Codex and Claude labels')],
             ['remote-enabled', _('Remote desktop banner'),
                 _('A red warning while RDP or VNC is accepting connections')],
         ]) {
