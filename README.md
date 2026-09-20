@@ -1,8 +1,8 @@
 # Lidgets
 
-One configurable GNOME Shell extension for world clocks, weather, live system
-metrics, optional Codex and Claude Code usage limits, a remote-desktop warning,
-and a panel drawer. Lidgets currently
+One configurable GNOME Shell extension for world clocks, weather, currency
+conversion, live system metrics, optional Codex and Claude Code usage limits,
+a remote-desktop warning, and a panel drawer. Lidgets currently
 supports GNOME Shell 50.
 
 ## Installation
@@ -47,6 +47,8 @@ gnome-extensions install --force dist/lidgets@neonshard.com.shell-extension.zip
 Lidgets contains no telemetry. When weather is enabled it sends the configured
 coordinates to Open-Meteo for forecasts. Searching for a location in
 preferences sends the entered place name to Open-Meteo's geocoding service.
+When the currency converter is enabled it sends the selected currency pair to
+Frankfurter for a reference exchange rate; the amount stays on the device.
 The optional Codex widget invokes the locally installed Codex CLI to request
 account quota data from OpenAI using its existing login. The optional Claude
 widget reads a local cache written by the Claude Code status-line connection.
@@ -54,6 +56,15 @@ Only usage percentages, window lengths, and reset/update timestamps are cached;
 Lidgets does not read or store API keys, authentication tokens, or conversations.
 Other widgets use local system data. NVIDIA metrics optionally invoke the
 locally installed `nvidia-smi` command.
+
+### Currency converter
+
+Enable **Currency converter** under **Preferences → General → Widgets**.
+The panel shows the saved amount and conversion. Open its dropdown to edit the
+amount, choose either currency, swap the pair, or refresh the rate. Rates come
+from [Frankfurter](https://frankfurter.dev/), require no account or API key,
+and refresh every six hours. An asterisk marks a retained rate when a refresh
+fails.
 
 ### Codex and Claude Code limits
 
@@ -134,6 +145,7 @@ lidgets@neonshard.com/
     metrics.js     metrics panel indicator
     clocks.js      world clocks indicator
     weather.js     Open-Meteo indicator
+    currency.js    Frankfurter currency converter
     remote.js      "REMOTE DESKTOP ON" banner
     drawer.js      narrow-screen collapse
   schemas/         GSettings schema + compiled binary

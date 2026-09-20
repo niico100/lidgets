@@ -1,7 +1,7 @@
 {
   "uuid": "lidgets@neonshard.com",
   "name": "Lidgets",
-  "description": "World clocks, weather and system metrics in one configurable panel widget, with a drawer that folds them away when the panel is short of room.",
+  "description": "World clocks, weather, currency conversion and system metrics in one configurable panel widget, with a drawer that folds them away when the panel is short of room.",
   "shell-version": [
     "50"
   ],

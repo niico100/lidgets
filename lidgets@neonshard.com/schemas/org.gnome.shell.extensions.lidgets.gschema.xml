@@ -40,6 +40,24 @@
       <description>Append the 5-hour reset time and the weekly reset day and time to the Codex and Claude Code panel labels.</description>
     </key>
 
+    <!-- Currency converter -->
+    <key name="currency-enabled" type="b">
+      <default>false</default>
+      <summary>Show the currency converter</summary>
+    </key>
+    <key name="currency-amount" type="d">
+      <default>100.0</default>
+      <summary>Amount to convert</summary>
+    </key>
+    <key name="currency-from" type="s">
+      <default>'EUR'</default>
+      <summary>Source currency</summary>
+    </key>
+    <key name="currency-to" type="s">
+      <default>'USD'</default>
+      <summary>Target currency</summary>
+    </key>
+
     <!-- Drawer -->
     <key name="drawer-mode" type="s">
       <default>'manual'</default>

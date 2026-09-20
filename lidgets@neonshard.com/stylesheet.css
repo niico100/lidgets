@@ -28,6 +28,11 @@
     font-size: 0.9em;
 }
 
+.lidgets-currency-entry {
+    min-width: 110px;
+    margin-left: 24px;
+}
+
 /*
  * The drawer borrows popup-menu-content from the shell theme for its
  * background and border, so it tracks light/dark automatically. These rules

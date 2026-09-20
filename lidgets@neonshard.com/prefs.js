@@ -175,6 +175,8 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         for (const [key, title, subtitle] of [
             ['clocks-enabled', _('World clocks'), _('Times for the zones you follow')],
             ['weather-enabled', _('Weather'), _('Current conditions and an 8-hour forecast')],
+            ['currency-enabled', _('Currency converter'),
+                _('Live reference-rate conversion; configure it from the panel popup')],
             ['metrics-enabled', _('System metrics'), _('CPU, GPU, memory, disk and more')],
             ['codex-enabled', _('Codex limits'), _('Subscription allowance remaining; requires Codex CLI login')],
             ['claude-enabled', _('Claude Code limits'), _('5-hour and weekly allowance remaining; connect below')],

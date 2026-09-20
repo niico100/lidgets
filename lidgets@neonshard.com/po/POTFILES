@@ -1,6 +1,7 @@
 extension.js
 prefs.js
 lib/clocks.js
+lib/currency.js
 lib/drawer.js
 lib/metrics.js
 lib/remote.js

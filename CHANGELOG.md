@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Add an optional drawer-aware currency converter with editable amount and
+  currency pair, six-hour reference-rate refreshes, and offline stale marking.
 - Add optional Codex and Claude Code widgets showing subscription allowance
   remaining, reset times, and stale readings. Include a Claude Code status-line
   connection that preserves the existing command.
