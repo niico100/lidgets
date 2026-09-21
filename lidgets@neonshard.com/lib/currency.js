@@ -47,10 +47,14 @@ function parseAmount(text) {
     return validAmount(value) ? value : null;
 }
 
-function formatNumber(value, compact = false) {
-    return new Intl.NumberFormat(undefined, compact
-        ? {maximumSignificantDigits: 6}
-        : {maximumFractionDigits: 6}).format(value);
+function formatCurrency(value, currency) {
+    return new Intl.NumberFormat(undefined, {
+        style: 'currency',
+        currency,
+        currencyDisplay: 'narrowSymbol',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(value);
 }
 
 export const CurrencyIndicator = GObject.registerClass(
@@ -250,8 +254,8 @@ class CurrencyIndicator extends PanelMenu.Button {
         }
 
         this._resultItem.label.text =
-            `${formatNumber(amount)} ${from} = ` +
-            `${formatNumber(amount * this._rate)} ${to}`;
+            `${formatCurrency(amount, from)} = ` +
+            formatCurrency(amount * this._rate, to);
         if (from === to)
             this._dateItem.label.text = _('The currencies are the same');
         else if (this._rateDate)
@@ -269,8 +273,8 @@ class CurrencyIndicator extends PanelMenu.Button {
             this._label.text = this._failed ? '⚠ FX' : '💱 …';
         } else {
             const stale = this._failed ? '*' : '';
-            this._label.text = `${formatNumber(amount, true)} ${from} → ` +
-                `${formatNumber(amount * this._rate, true)} ${to}${stale}`;
+            this._label.text = `${formatCurrency(amount, from)} → ` +
+                `${formatCurrency(amount * this._rate, to)}${stale}`;
         }
         this._renderPopup(parseAmount(this._amountEntry?.get_text() ?? String(amount)));
     }
