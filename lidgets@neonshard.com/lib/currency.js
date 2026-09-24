@@ -21,6 +21,8 @@ import {makeJsonFetcher} from './geocode.js';
 const API_ROOT = 'https://api.frankfurter.dev/v2/rate';
 const HTTP_TIMEOUT_SECONDS = 15;
 const REFRESH_SECONDS = 6 * 60 * 60;
+const CONVERSION_DISPLAY_SECONDS = 60 * 60;
+const CURRENCY_SYMBOLS = '$ £ € ¥';
 const MIN_AMOUNT = 0.000001;
 const MAX_AMOUNT = 1_000_000_000_000;
 
@@ -68,6 +70,8 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._rateDate = '';
         this._failed = false;
         this._refreshId = 0;
+        this._collapseId = 0;
+        this._conversionAtUs = 0;
         this._pairReloadId = 0;
         this._requestGeneration = 0;
 
@@ -83,7 +87,11 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._fetchJson = makeJsonFetcher(this._session, this._cancellable);
 
         this._settingsIds = [
-            settings.connect('changed::currency-amount', () => this._render()),
+            settings.connect('changed::currency-amount', () => {
+                if (this._rate !== null)
+                    this._markConversionFresh();
+                this._render();
+            }),
             settings.connect('changed::currency-from', () => this._queuePairReload()),
             settings.connect('changed::currency-to', () => this._queuePairReload()),
         ];
@@ -116,6 +124,8 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._pairReloadId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._pairReloadId = 0;
             this._rate = null;
+            this._conversionAtUs = 0;
+            this._clearCollapseTimer();
             this._failed = false;
             this._buildMenu();
             this._render();
@@ -134,6 +144,7 @@ class CurrencyIndicator extends PanelMenu.Button {
             this._rate = 1;
             this._rateDate = '';
             this._failed = false;
+            this._markConversionFresh();
             this._render();
             return;
         }
@@ -149,12 +160,30 @@ class CurrencyIndicator extends PanelMenu.Button {
                 this._rate = rate;
                 this._rateDate = typeof data.date === 'string' ? data.date : '';
                 this._failed = false;
+                this._markConversionFresh();
             } else {
                 // Keep a previous answer useful while making its age visible.
                 this._failed = true;
             }
             this._render();
         });
+    }
+
+    _clearCollapseTimer() {
+        if (this._collapseId !== 0)
+            GLib.source_remove(this._collapseId);
+        this._collapseId = 0;
+    }
+
+    _markConversionFresh() {
+        this._clearCollapseTimer();
+        this._conversionAtUs = GLib.get_monotonic_time();
+        this._collapseId = GLib.timeout_add_seconds(
+            GLib.PRIORITY_DEFAULT, CONVERSION_DISPLAY_SECONDS + 1, () => {
+                this._collapseId = 0;
+                this._render();
+                return GLib.SOURCE_REMOVE;
+            });
     }
 
     _buildCurrencyMenu(title, current, settingKey) {
@@ -271,6 +300,10 @@ class CurrencyIndicator extends PanelMenu.Button {
         const {from, to} = this._pair();
         if (this._rate === null) {
             this._label.text = this._failed ? '⚠ FX' : '💱 …';
+        } else if (this._conversionAtUs !== 0 &&
+            GLib.get_monotonic_time() - this._conversionAtUs >=
+                CONVERSION_DISPLAY_SECONDS * 1_000_000) {
+            this._label.text = CURRENCY_SYMBOLS;
         } else {
             const stale = this._failed ? '*' : '';
             this._label.text = `${formatCurrency(amount, from)} → ` +
@@ -282,12 +315,13 @@ class CurrencyIndicator extends PanelMenu.Button {
     _onDestroy() {
         this._destroyed = true;
         this._requestGeneration++;
-        for (const id of [this._refreshId, this._pairReloadId]) {
+        for (const id of [this._refreshId, this._pairReloadId, this._collapseId]) {
             if (id !== 0)
                 GLib.source_remove(id);
         }
         this._refreshId = 0;
         this._pairReloadId = 0;
+        this._collapseId = 0;
         this._cancellable?.cancel();
         this._cancellable = null;
         this._session = null;
