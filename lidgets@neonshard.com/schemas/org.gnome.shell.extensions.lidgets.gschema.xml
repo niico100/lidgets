@@ -57,6 +57,10 @@
       <default>'USD'</default>
       <summary>Target currency</summary>
     </key>
+    <key name="currency-last-lookup-us" type="x">
+      <default>0</default>
+      <summary>Time of the last currency lookup in microseconds since the epoch</summary>
+    </key>
 
     <!-- Drawer -->
     <key name="drawer-mode" type="s">

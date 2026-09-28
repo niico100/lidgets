@@ -71,7 +71,7 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._failed = false;
         this._refreshId = 0;
         this._collapseId = 0;
-        this._conversionAtUs = 0;
+        this._lastLookupUs = settings.get_int64('currency-last-lookup-us');
         this._pairReloadId = 0;
         this._requestGeneration = 0;
 
@@ -88,16 +88,19 @@ class CurrencyIndicator extends PanelMenu.Button {
 
         this._settingsIds = [
             settings.connect('changed::currency-amount', () => {
-                if (this._rate !== null)
-                    this._markConversionFresh();
-                this._render();
+                this._markConversionFresh();
             }),
             settings.connect('changed::currency-from', () => this._queuePairReload()),
             settings.connect('changed::currency-to', () => this._queuePairReload()),
         ];
 
         this.connect('destroy', () => this._onDestroy());
+        this.menu.connect('open-state-changed', (_menu, isOpen) => {
+            if (isOpen)
+                this._markConversionFresh();
+        });
         this._buildMenu();
+        this._scheduleCollapse();
         this._fetchRate();
         this._refreshId = GLib.timeout_add_seconds(
             GLib.PRIORITY_DEFAULT, REFRESH_SECONDS, () => {
@@ -124,11 +127,10 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._pairReloadId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._pairReloadId = 0;
             this._rate = null;
-            this._conversionAtUs = 0;
             this._clearCollapseTimer();
             this._failed = false;
             this._buildMenu();
-            this._render();
+            this._markConversionFresh();
             this._fetchRate();
             return GLib.SOURCE_REMOVE;
         });
@@ -144,7 +146,6 @@ class CurrencyIndicator extends PanelMenu.Button {
             this._rate = 1;
             this._rateDate = '';
             this._failed = false;
-            this._markConversionFresh();
             this._render();
             return;
         }
@@ -160,7 +161,6 @@ class CurrencyIndicator extends PanelMenu.Button {
                 this._rate = rate;
                 this._rateDate = typeof data.date === 'string' ? data.date : '';
                 this._failed = false;
-                this._markConversionFresh();
             } else {
                 // Keep a previous answer useful while making its age visible.
                 this._failed = true;
@@ -175,15 +175,33 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._collapseId = 0;
     }
 
-    _markConversionFresh() {
+    _conversionIsRecent() {
+        const ageUs = GLib.get_real_time() - this._lastLookupUs;
+        return this._lastLookupUs > 0 && ageUs >= 0 &&
+            ageUs < CONVERSION_DISPLAY_SECONDS * 1_000_000;
+    }
+
+    _scheduleCollapse() {
         this._clearCollapseTimer();
-        this._conversionAtUs = GLib.get_monotonic_time();
+        if (!this._conversionIsRecent())
+            return;
+        const remainingUs = CONVERSION_DISPLAY_SECONDS * 1_000_000 -
+            (GLib.get_real_time() - this._lastLookupUs);
         this._collapseId = GLib.timeout_add_seconds(
-            GLib.PRIORITY_DEFAULT, CONVERSION_DISPLAY_SECONDS + 1, () => {
+            GLib.PRIORITY_DEFAULT,
+            Math.max(1, Math.min(30, Math.ceil(remainingUs / 1_000_000))), () => {
                 this._collapseId = 0;
                 this._render();
+                this._scheduleCollapse();
                 return GLib.SOURCE_REMOVE;
             });
+    }
+
+    _markConversionFresh() {
+        this._lastLookupUs = GLib.get_real_time();
+        this._settings.set_int64('currency-last-lookup-us', this._lastLookupUs);
+        this._scheduleCollapse();
+        this._render();
     }
 
     _buildCurrencyMenu(title, current, settingKey) {
@@ -261,7 +279,10 @@ class CurrencyIndicator extends PanelMenu.Button {
             this._settings.set_string('currency-from', pair.to);
             this._settings.set_string('currency-to', pair.from);
         });
-        this.menu.addAction(_('Refresh rate'), () => this._fetchRate());
+        this.menu.addAction(_('Refresh rate'), () => {
+            this._markConversionFresh();
+            this._fetchRate();
+        });
         this._render();
     }
 
@@ -298,12 +319,10 @@ class CurrencyIndicator extends PanelMenu.Button {
     _render() {
         const amount = this._amount();
         const {from, to} = this._pair();
-        if (this._rate === null) {
-            this._label.text = this._failed ? '⚠ FX' : '💱 …';
-        } else if (this._conversionAtUs !== 0 &&
-            GLib.get_monotonic_time() - this._conversionAtUs >=
-                CONVERSION_DISPLAY_SECONDS * 1_000_000) {
+        if (!this._conversionIsRecent()) {
             this._label.text = CURRENCY_SYMBOLS;
+        } else if (this._rate === null) {
+            this._label.text = this._failed ? '⚠ FX' : '💱 …';
         } else {
             const stale = this._failed ? '*' : '';
             this._label.text = `${formatCurrency(amount, from)} → ` +

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Keep the currency panel placeholder after old lookups, including across
+  reboots and automatic rate refreshes.
 - Add an optional drawer-aware currency converter with editable amount and
   currency pair, two-decimal symbol-based values, six-hour reference-rate
   refreshes, and offline stale marking.

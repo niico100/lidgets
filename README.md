@@ -60,8 +60,11 @@ locally installed `nvidia-smi` command.
 ### Currency converter
 
 Enable **Currency converter** under **Preferences → General → Widgets**.
-The panel shows the saved amount and conversion. Open its dropdown to edit the
-amount, choose either currency, swap the pair, or refresh the rate. Rates come
+The panel shows a conversion for one hour after you use its dropdown, edit the
+amount or currency pair, or refresh the rate. It then returns to currency
+symbols, including after a reboot; automatic rate updates do not reveal an old
+lookup. Open the dropdown to edit the amount, choose either currency, swap the
+pair, or refresh the rate. Rates come
 from [Frankfurter](https://frankfurter.dev/), require no account or API key,
 and refresh every six hours. An asterisk marks a retained rate when a refresh
 fails.
