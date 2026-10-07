@@ -515,6 +515,10 @@ msgstr ""
 msgid "Allowance remaining"
 msgstr ""
 
+#: lib/usage.js:109
+msgid "Today"
+msgstr ""
+
 #: lib/usage.js:108
 msgid "Resets"
 msgstr ""
