@@ -49,6 +49,8 @@ coordinates to Open-Meteo for forecasts. Searching for a location in
 preferences sends the entered place name to Open-Meteo's geocoding service.
 When the currency converter is enabled it sends the selected currency pair to
 Frankfurter for a reference exchange rate; the amount stays on the device.
+When the stocks and crypto widget is enabled it sends the chosen ticker
+symbols, and any ticker search typed in preferences, to Yahoo Finance.
 The optional Codex widget invokes the locally installed Codex CLI to request
 account quota data from OpenAI using its existing login. The optional Claude
 widget reads a local cache written by the Claude Code status-line connection.
@@ -68,6 +70,16 @@ pair, or refresh the rate. Rates come
 from [Frankfurter](https://frankfurter.dev/), require no account or API key,
 and refresh every six hours. An asterisk marks a retained rate when a refresh
 fails.
+
+### Stocks and crypto
+
+Enable **Stocks and crypto** under **Preferences → General → Widgets**, then
+search for stocks, ETFs, indices or crypto under **Preferences → Markets**.
+Tick a ticker to show its price and 24-hour change in the panel, e.g.
+`BTC $75,590 (−0.89%)`; unticked tickers appear only in the dropdown. The
+dropdown lists every ticker with its 24-hour, 7-day, 1-month and 6-month
+change. Prices come from Yahoo Finance's keyless chart API and refresh every
+five minutes; an asterisk marks a retained price when a refresh fails.
 
 ### Codex and Claude Code limits
 
@@ -137,7 +149,7 @@ pick up code changes on Wayland.
 ```
 lidgets@neonshard.com/
   extension.js     entry point; builds/tears down widgets from settings
-  prefs.js         Adw preferences window (4 pages)
+  prefs.js         Adw preferences window (5 pages)
   stylesheet.css
   icons/           symbolic system-metric icons
   CREDITS          attribution for derived icon assets
@@ -149,6 +161,8 @@ lidgets@neonshard.com/
     clocks.js      world clocks indicator
     weather.js     Open-Meteo indicator
     currency.js    Frankfurter currency converter
+    markets.js     stocks and crypto indicator
+    quotes.js      Yahoo Finance search and quote parsing; imported by prefs.js too
     remote.js      "REMOTE DESKTOP ON" banner
     drawer.js      narrow-screen collapse
   schemas/         GSettings schema + compiled binary

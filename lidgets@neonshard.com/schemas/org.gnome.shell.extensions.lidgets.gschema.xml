@@ -62,6 +62,20 @@
       <summary>Time of the last currency lookup in microseconds since the epoch</summary>
     </key>
 
+    <!-- Stocks and crypto -->
+    <key name="markets-enabled" type="b">
+      <default>false</default>
+      <summary>Show stock and crypto prices</summary>
+    </key>
+    <key name="market-symbols" type="a(ssb)">
+      <default>[('BTC-USD', 'Bitcoin USD', true)]</default>
+      <summary>Tickers to follow</summary>
+      <description>List of (Yahoo Finance symbol, display name, show in panel)
+      tuples, in display order. Every ticker is listed in the dropdown with its
+      24-hour, 7-day, 1-month and 6-month change; only those marked for the
+      panel show their price and 24-hour change there.</description>
+    </key>
+
     <!-- Drawer -->
     <key name="drawer-mode" type="s">
       <default>'manual'</default>

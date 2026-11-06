@@ -14,6 +14,7 @@ import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import {ClocksIndicator} from './lib/clocks.js';
 import {WeatherIndicator} from './lib/weather.js';
 import {CurrencyIndicator} from './lib/currency.js';
+import {MarketsIndicator} from './lib/markets.js';
 import {MetricsIndicator} from './lib/metrics.js';
 import {CodexIndicator, ClaudeIndicator} from './lib/usage.js';
 import {RemoteBanner} from './lib/remote.js';
@@ -31,6 +32,7 @@ const WIDGETS = [
     {key: 'clocks-enabled', role: 'lidgets-clocks', ctor: ClocksIndicator},
     {key: 'weather-enabled', role: 'lidgets-weather', ctor: WeatherIndicator},
     {key: 'currency-enabled', role: 'lidgets-currency', ctor: CurrencyIndicator},
+    {key: 'markets-enabled', role: 'lidgets-markets', ctor: MarketsIndicator},
     {key: 'metrics-enabled', role: 'lidgets-metrics', ctor: MetricsIndicator},
     {key: 'codex-enabled', role: 'lidgets-codex', ctor: CodexIndicator},
     {key: 'claude-enabled', role: 'lidgets-claude', ctor: ClaudeIndicator},

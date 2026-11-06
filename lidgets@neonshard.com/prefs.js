@@ -19,6 +19,7 @@ import {geocode, makeJsonFetcher, describePlace} from './lib/geocode.js';
 import {
     clockLabel, makeClockEntry, timezoneFlag, timezoneLocality,
 } from './lib/timezones.js';
+import {USER_AGENT, searchSymbols, shortSymbol} from './lib/quotes.js';
 
 /*
  * Long enough that ordinary typing produces one request rather than one per
@@ -32,6 +33,7 @@ const HTTP_TIMEOUT_SECONDS = 15;
  * than any panel and folding it away stops helping. Zero is valid.
  */
 const MAX_CLOCKS = 10;
+const MAX_TICKERS = 12;
 
 function localTimezone() {
     try {
@@ -142,6 +144,7 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         window.add(this._generalPage(settings));
         window.add(this._clocksPage(settings));
         window.add(this._weatherPage(settings));
+        window.add(this._marketsPage(settings));
         window.add(this._metricsPage(settings));
     }
 
@@ -177,6 +180,8 @@ export default class LidgetsPreferences extends ExtensionPreferences {
             ['weather-enabled', _('Weather'), _('Current conditions and an 8-hour forecast')],
             ['currency-enabled', _('Currency converter'),
                 _('Live reference-rate conversion; configure it from the panel popup')],
+            ['markets-enabled', _('Stocks and crypto'),
+                _('Prices with 24-hour change; choose tickers on the Markets page')],
             ['metrics-enabled', _('System metrics'), _('CPU, GPU, memory, disk and more')],
             ['codex-enabled', _('Codex limits'), _('Subscription allowance remaining; requires Codex CLI login')],
             ['claude-enabled', _('Claude Code limits'), _('5-hour and weekly allowance remaining; connect below')],
@@ -681,6 +686,242 @@ export default class LidgetsPreferences extends ExtensionPreferences {
 
         settings.connect('changed::weather-city', refreshCurrent);
         refreshCurrent();
+        return page;
+    }
+
+    /* ---------------------------------------------------------------- markets */
+
+    _marketsPage(settings) {
+        const page = new Adw.PreferencesPage({
+            title: _('Markets'),
+            icon_name: 'x-office-spreadsheet-symbolic',
+        });
+
+        const options = new Adw.PreferencesGroup({title: _('Display')});
+        page.add(options);
+
+        const enabled = new Adw.SwitchRow({title: _('Show stock and crypto prices')});
+        settings.bind('markets-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
+        options.add(enabled);
+
+        const list = new Adw.PreferencesGroup({
+            title: _('Tickers'),
+            description: _('Ticked prices show in the panel with their 24-hour change. Every ticker is listed in the dropdown with its 24-hour, 7-day, 1-month and 6-month change.'),
+        });
+        page.add(list);
+
+        /*
+         * Like the clock list, rows are rebuilt only on add, remove and
+         * reorder; a checkbox writes straight to settings.
+         */
+        let rows = [];
+        const tickers = settings.get_value('market-symbols').deepUnpack();
+        const save = () => settings.set_value(
+            'market-symbols', new GLib.Variant('a(ssb)', tickers));
+
+        const rebuild = () => {
+            for (const row of rows)
+                list.remove(row);
+            rows = [];
+            list.title = `${_('Tickers')}  (${tickers.length}/${MAX_TICKERS})`;
+
+            if (tickers.length === 0) {
+                const empty = new Adw.ActionRow({
+                    title: _('No tickers'),
+                    subtitle: _('Search below to add a stock or crypto'),
+                });
+                list.add(empty);
+                rows.push(empty);
+                return;
+            }
+
+            tickers.forEach(([symbol, name], index) => {
+                const row = new Adw.ActionRow({
+                    title: shortSymbol(symbol),
+                    subtitle: name === symbol ? '' : `${name}  ·  ${symbol}`,
+                    activatable: true,
+                });
+
+                const check = new Gtk.CheckButton({
+                    active: tickers[index][2],
+                    valign: Gtk.Align.CENTER,
+                    tooltip_text: _('Show the price in the panel'),
+                });
+                check.connect('toggled', () => {
+                    tickers[index][2] = check.active;
+                    save();
+                });
+                row.add_prefix(check);
+                row.activatable_widget = check;
+
+                const up = makeFlatButton('go-up-symbolic', _('Move earlier'));
+                up.sensitive = index > 0;
+                up.connect('clicked', () => {
+                    [tickers[index - 1], tickers[index]] =
+                        [tickers[index], tickers[index - 1]];
+                    save();
+                    rebuild();
+                });
+
+                const down = makeFlatButton('go-down-symbolic', _('Move later'));
+                down.sensitive = index < tickers.length - 1;
+                down.connect('clicked', () => {
+                    [tickers[index + 1], tickers[index]] =
+                        [tickers[index], tickers[index + 1]];
+                    save();
+                    rebuild();
+                });
+
+                const remove = makeFlatButton('user-trash-symbolic', _('Remove this ticker'));
+                remove.connect('clicked', () => {
+                    tickers.splice(index, 1);
+                    save();
+                    rebuild();
+                });
+
+                row.add_suffix(up);
+                row.add_suffix(down);
+                row.add_suffix(remove);
+                list.add(row);
+                rows.push(row);
+            });
+        };
+
+        /* ------------------------------------------------------------ search */
+
+        const searchGroup = new Adw.PreferencesGroup({
+            title: _('Add a stock or crypto'),
+            description: _('Search by name or symbol, such as Apple, AAPL or Bitcoin, then pick a result. Prices come from Yahoo Finance.'),
+        });
+        page.add(searchGroup);
+
+        const searchRow = new Adw.EntryRow({title: _('Search')});
+        const spinner = new Gtk.Spinner({valign: Gtk.Align.CENTER});
+        searchRow.add_suffix(spinner);
+        searchGroup.add(searchRow);
+
+        const resultsGroup = new Adw.PreferencesGroup();
+        page.add(resultsGroup);
+
+        for (const group of [list, searchGroup, resultsGroup]) {
+            settings.bind('markets-enabled', group, 'sensitive',
+                Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.NO_SENSITIVITY);
+        }
+
+        let resultRows = [];
+        const clearResults = () => {
+            for (const row of resultRows)
+                resultsGroup.remove(row);
+            resultRows = [];
+        };
+
+        const addMessage = title => {
+            const row = new Adw.ActionRow({title});
+            resultsGroup.add(row);
+            resultRows.push(row);
+        };
+
+        const typeLabels = {
+            EQUITY: _('Stock'),
+            ETF: _('ETF'),
+            CRYPTOCURRENCY: _('Crypto'),
+            INDEX: _('Index'),
+            MUTUALFUND: _('Fund'),
+        };
+
+        const showResults = results => {
+            clearResults();
+            if (results === null) {
+                addMessage(_('Could not reach Yahoo Finance'));
+                return;
+            }
+            if (results.length === 0) {
+                addMessage(_('No matching stocks or crypto'));
+                return;
+            }
+
+            for (const result of results) {
+                const added = tickers.some(t => t[0] === result.symbol);
+                const row = new Adw.ActionRow({
+                    title: `${result.symbol}  ·  ${result.name}`,
+                    subtitle: [typeLabels[result.type], result.exchange]
+                        .filter(Boolean).join('  ·  '),
+                    activatable: !added,
+                });
+                row.add_suffix(new Gtk.Image({
+                    icon_name: added ? 'object-select-symbolic' : 'list-add-symbolic',
+                    valign: Gtk.Align.CENTER,
+                }));
+                row.connect('activated', () => {
+                    if (tickers.length >= MAX_TICKERS ||
+                        tickers.some(t => t[0] === result.symbol))
+                        return;
+                    tickers.push([result.symbol, result.name, true]);
+                    save();
+                    rebuild();
+                    searchRow.text = '';
+                    clearResults();
+                });
+                resultsGroup.add(row);
+                resultRows.push(row);
+            }
+        };
+
+        const session = new Soup.Session({
+            timeout: HTTP_TIMEOUT_SECONDS,
+            user_agent: USER_AGENT,
+        });
+        const searchCancellable = new Gio.Cancellable();
+        const fetchJson = makeJsonFetcher(session, searchCancellable);
+
+        // Debounced and serialised the same way as the place search.
+        let searchTimeoutId = 0;
+        let searchSerial = 0;
+
+        const runSearch = () => {
+            const query = searchRow.text.trim();
+            if (query.length < 1) {
+                clearResults();
+                spinner.stop();
+                return;
+            }
+            if (tickers.length >= MAX_TICKERS) {
+                clearResults();
+                addMessage(_('Remove a ticker before adding another'));
+                return;
+            }
+
+            const serial = ++searchSerial;
+            spinner.start();
+            searchSymbols(fetchJson, query, results => {
+                if (serial !== searchSerial)
+                    return;
+                spinner.stop();
+                showResults(results);
+            });
+        };
+
+        searchRow.connect('changed', () => {
+            if (searchTimeoutId !== 0)
+                GLib.source_remove(searchTimeoutId);
+            searchTimeoutId = GLib.timeout_add(
+                GLib.PRIORITY_DEFAULT, SEARCH_DEBOUNCE_MS, () => {
+                    searchTimeoutId = 0;
+                    runSearch();
+                    return GLib.SOURCE_REMOVE;
+                });
+        });
+
+        page.connect('destroy', () => {
+            if (searchTimeoutId !== 0) {
+                GLib.source_remove(searchTimeoutId);
+                searchTimeoutId = 0;
+            }
+            searchSerial++;
+            searchCancellable.cancel();
+        });
+
+        rebuild();
         return page;
     }
 

@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Add an optional stocks and crypto widget. Search for tickers in
+  **Preferences → Markets** and tick which prices show in the panel with their
+  24-hour change; the dropdown lists every ticker with 24-hour, 7-day, 1-month
+  and 6-month changes. Prices come from Yahoo Finance and refresh every five
+  minutes.
 - Keep the currency panel placeholder after old lookups, including across
   reboots and automatic rate refreshes.
 - Add an optional drawer-aware currency converter with editable amount and

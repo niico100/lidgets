@@ -8,6 +8,7 @@
  */
 
 import GLib from 'gi://GLib';
+import Gio from 'gi://Gio';
 import Soup from 'gi://Soup?version=3.0';
 
 const GEOCODER = 'https://geocoding-api.open-meteo.com/v1/search';
@@ -62,6 +63,39 @@ export function makeJsonFetcher(session, cancellable) {
                 // otherwise a failing callback would be invoked a second time.
                 onDone(data);
             });
+    };
+}
+
+/*
+ * Calls `onOnline` shortly after the network comes back, so a widget that
+ * started offline does not sit on its failure until the next slow refresh.
+ * The monitor signals on every route or connection change, often in bursts
+ * and before DNS is usable, so wait a moment and coalesce. Callers refetch
+ * only if their last attempt failed, which keeps this free when all is well.
+ * Returns a function that stops watching.
+ */
+const NETWORK_SETTLE_SECONDS = 3;
+
+export function watchNetworkRecovery(onOnline) {
+    const monitor = Gio.NetworkMonitor.get_default();
+    let timeoutId = 0;
+
+    const changedId = monitor.connect('network-changed', (_monitor, available) => {
+        if (!available || timeoutId !== 0)
+            return;
+        timeoutId = GLib.timeout_add_seconds(
+            GLib.PRIORITY_DEFAULT, NETWORK_SETTLE_SECONDS, () => {
+                timeoutId = 0;
+                onOnline();
+                return GLib.SOURCE_REMOVE;
+            });
+    });
+
+    return () => {
+        monitor.disconnect(changedId);
+        if (timeoutId !== 0)
+            GLib.source_remove(timeoutId);
+        timeoutId = 0;
     };
 }
 
