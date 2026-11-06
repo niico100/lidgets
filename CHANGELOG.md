@@ -9,6 +9,10 @@
   minutes.
 - Keep the currency panel placeholder after old lookups, including across
   reboots and automatic rate refreshes.
+- Refetch weather and exchange rates when the network comes back, instead of
+  staying offline until the next scheduled refresh.
+- Move the fold button to the right of the widgets so it stays reachable when
+  they overflow the left edge of the panel.
 - Add an optional drawer-aware currency converter with editable amount and
   currency pair, two-decimal symbol-based values, six-hour reference-rate
   refreshes, and offline stale marking.

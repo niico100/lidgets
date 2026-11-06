@@ -246,7 +246,9 @@ export default class LidgetsExtension extends Extension {
             this._remote = new RemoteBanner();
 
         // Built last so the indicators it collapses already exist.
-        this._drawer = new Drawer(this._settings, () => this._indicators);
+        this._drawer = new Drawer(this._settings, () => this._indicators,
+            indicator => indicator instanceof CodexIndicator ||
+                indicator instanceof ClaudeIndicator);
     }
 
     _teardown() {

@@ -36,13 +36,16 @@ export class Drawer {
     /*
      * `getIndicators` is a callback rather than a fixed array because the
      * extension rebuilds its widgets whenever prefs change, and the drawer
-     * must always act on the current set.
+     * must always act on the current set. `isPinned` picks the indicators
+     * that manual mode brings back inline first, before the rest.
      */
-    constructor(settings, getIndicators) {
+    constructor(settings, getIndicators, isPinned) {
         this._settings = settings;
         this._getIndicators = getIndicators;
+        this._isPinned = isPinned;
         this._stashed = [];
         this._collapsed = false;
+        this._partial = false;
         this._open = false;
         this._capturedEventId = 0;
         this._idleId = 0;
@@ -55,7 +58,7 @@ export class Drawer {
             'monitors-changed', () => this.sync());
         this._settingsIds =
             ['drawer-mode', 'drawer-max-width', 'drawer-space-fraction',
-                'drawer-collapsed-per-monitor'].map(
+                'drawer-collapsed-per-monitor', 'drawer-pinned-per-monitor'].map(
                 key => settings.connect(`changed::${key}`, () => this.sync()));
 
         this.sync();
@@ -99,14 +102,21 @@ export class Drawer {
          *
          * Shells before 49 have no ClickGesture, so fall back to the button
          * press signal those versions used.
+         *
+         * Only the primary button counts. When the panel is crowded, Dash to
+         * Panel lets its taskbar run underneath these buttons, and a
+         * right-click meant for a dock icon must not unfold the widgets.
          */
         if (Clutter.ClickGesture) {
             const click = new Clutter.ClickGesture();
             click.set_recognize_on_press(true);
+            click.set_required_button(Clutter.BUTTON_PRIMARY);
             click.connect('recognize', () => this._toggleDrawer());
             this._toggle.add_action(click);
         } else {
-            this._toggle.connect('button-press-event', () => {
+            this._toggle.connect('button-press-event', (actor, event) => {
+                if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+                    return Clutter.EVENT_PROPAGATE;
                 this._toggleDrawer();
                 return Clutter.EVENT_STOP;
             });
@@ -118,17 +128,25 @@ export class Drawer {
         if (stale && stale !== this._toggle)
             stale.destroy();
 
-        // Sit in the same panel area as the widgets it collapses.
+        /*
+         * Sit immediately right of the widgets it collapses. When they are too
+         * wide, Dash to Panel pushes the right box off the panel's left edge,
+         * so a button on their left would go with them and could never fold
+         * them back.
+         */
         Main.panel.addToStatusArea(PANEL_ROLE, this._toggle,
-            this._settings.get_int('panel-index'),
+            this._settings.get_int('panel-index') + this._getIndicators().length,
             this._settings.get_string('panel-box'));
+        this._placeToggleAfterWidgets();
+        this._detachFromMenuManager(this._toggle);
         this._setToggleVisible(false);
 
         /*
          * Once folded, manual mode exposes two separate panel actions: this
          * button puts the widgets back inline, while _toggle opens the drawer.
-         * Registering this second at the same index places it immediately
-         * before _toggle, giving the panel the compact "<  up" pair.
+         * Registering it at the widgets' first index places it before them;
+         * once they fold away it sits immediately before _toggle, giving the
+         * panel the compact "<  up" pair.
          */
         this._restoreToggle = new PanelMenu.Button(
             0.0, _('Show these in the panel'), true);
@@ -141,10 +159,13 @@ export class Drawer {
         if (Clutter.ClickGesture) {
             const click = new Clutter.ClickGesture();
             click.set_recognize_on_press(true);
+            click.set_required_button(Clutter.BUTTON_PRIMARY);
             click.connect('recognize', () => this._restoreFromPanel());
             this._restoreToggle.add_action(click);
         } else {
-            this._restoreToggle.connect('button-press-event', () => {
+            this._restoreToggle.connect('button-press-event', (actor, event) => {
+                if (event.get_button() !== Clutter.BUTTON_PRIMARY)
+                    return Clutter.EVENT_PROPAGATE;
                 this._restoreFromPanel();
                 return Clutter.EVENT_STOP;
             });
@@ -157,7 +178,39 @@ export class Drawer {
         Main.panel.addToStatusArea(RESTORE_ROLE, this._restoreToggle,
             this._settings.get_int('panel-index'),
             this._settings.get_string('panel-box'));
+        this._detachFromMenuManager(this._restoreToggle);
         this._setRestoreVisible(false);
+    }
+
+    /*
+     * addToStatusArea registers each button's PopupDummyMenu with the panel's
+     * menu manager. While any other panel menu is open, such as a Dash to
+     * Panel app icon's right-click menu, the manager switches to whichever
+     * registered button the pointer or key focus lands on, "opening" our
+     * dummy menu and handing our button a modal grab. These buttons are not
+     * menus, so keep them out of that rotation.
+     */
+    _detachFromMenuManager(button) {
+        Main.panel.menuManager.removeMenu(button.menu);
+        button.menu.close();
+    }
+
+    /*
+     * Counting widgets from panel-index is not enough: anything else in the box
+     * ahead of them, such as the hidden remote-desktop banner at index 0,
+     * shifts them along and would leave the button one slot short.
+     */
+    _placeToggleAfterWidgets() {
+        const toggle = this._movable(this._toggle);
+        const box = toggle.get_parent();
+        const last = this._getIndicators()
+            .map(indicator => this._movable(indicator))
+            .filter(movable => movable.get_parent() === box)
+            .at(-1);
+        if (!box || !last)
+            return;
+
+        box.set_child_above_sibling(toggle, last);
     }
 
     _buildDrawer() {
@@ -233,9 +286,17 @@ export class Drawer {
         this._restoreToggle.container.visible = visible;
     }
 
+    /*
+     * Unfolding goes in two steps: the first brings back only the pinned
+     * widgets, leaving the rest in the drawer, and the second brings back
+     * everything. Folding is still a single step.
+     */
     _restoreFromPanel() {
         this.close();
-        this._setManualCollapsed(false);
+        if (!this._partial && this._getIndicators().some(i => this._isPinned(i)))
+            this._setRemembered('drawer-pinned-per-monitor', true);
+        else
+            this._setManualCollapsed(false);
         this.sync();
     }
 
@@ -372,18 +433,31 @@ export class Drawer {
         return monitor ? `${monitor.width}x${monitor.height}` : 'unknown';
     }
 
-    _manualCollapsed() {
-        const remembered = this._settings
-            .get_value('drawer-collapsed-per-monitor').deepUnpack();
+    _remembered(key) {
+        const remembered = this._settings.get_value(key).deepUnpack();
         return remembered[this._monitorKey()] ?? false;
     }
 
+    _setRemembered(key, value) {
+        const remembered = this._settings.get_value(key).deepUnpack();
+        remembered[this._monitorKey()] = value;
+        this._settings.set_value(key, new GLib.Variant('a{sb}', remembered));
+    }
+
+    _manualCollapsed() {
+        return this._remembered('drawer-collapsed-per-monitor');
+    }
+
+    // Every manual fold or full unfold starts the two-step unfold over.
     _setManualCollapsed(collapsed) {
-        const remembered = this._settings
-            .get_value('drawer-collapsed-per-monitor').deepUnpack();
-        remembered[this._monitorKey()] = collapsed;
-        this._settings.set_value('drawer-collapsed-per-monitor',
-            new GLib.Variant('a{sb}', remembered));
+        this._setRemembered('drawer-pinned-per-monitor', false);
+        this._setRemembered('drawer-collapsed-per-monitor', collapsed);
+    }
+
+    // Whether manual mode has unfolded only the pinned widgets.
+    _pinnedInline() {
+        return this._settings.get_string('drawer-mode') === 'manual' &&
+            this._remembered('drawer-pinned-per-monitor');
     }
 
     _shouldCollapse() {
@@ -461,10 +535,15 @@ export class Drawer {
         if (!this._toggle)
             return;
 
-        if (this._shouldCollapse())
-            this._collapse();
-        else
+        if (this._shouldCollapse()) {
+            const partial = this._pinnedInline();
+            // Changing which widgets stay inline: put all back, then refold.
+            if (partial !== this._partial)
+                this._restore();
+            this._collapse(partial);
+        } else {
             this._restore();
+        }
 
         this._updateToggle();
 
@@ -476,9 +555,11 @@ export class Drawer {
             this._drawer?.hide();
     }
 
-    _collapse() {
+    _collapse(partial) {
         for (const indicator of this._getIndicators()) {
             if (!indicator || this._isDead(indicator))
+                continue;
+            if (partial && this._isPinned(indicator))
                 continue;
 
             const movable = this._movable(indicator);
@@ -502,6 +583,7 @@ export class Drawer {
         }
 
         this._collapsed = this._stashed.length > 0;
+        this._partial = this._collapsed && partial;
     }
 
     _restore() {
@@ -534,6 +616,7 @@ export class Drawer {
 
         this._stashed = [];
         this._collapsed = false;
+        this._partial = false;
     }
 
     /* --------------------------------------------------------- open / close */

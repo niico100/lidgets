@@ -200,8 +200,9 @@ descriptive names. The symbolic icon family is derived from the GPL-licensed
 
 ### Folding
 
-Default mode is `manual`: a `›` button in the panel folds the widgets into the
-drawer. Once folded, the panel shows `‹` to put them back inline and an arrow
+Default mode is `manual`: a `›` button right of the widgets folds them into the
+drawer. It sits on the right so it stays reachable when the widgets overflow
+the panel's left edge. Once folded, the panel shows `‹` to put them back inline and an arrow
 toward the drawer to open it. No threshold, no measurement, no guessing —
 portable by construction.
 

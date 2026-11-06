@@ -99,15 +99,15 @@ class UsageIndicator extends PanelMenu.Button {
         const period = w => w.minutes === 300 ? '5h' : w.minutes === 10080 ? '1w' : `${w.minutes}m`;
         // Passing a reset does not prove a new allowance is available.
         const remaining = w => w.resetsAt && w.resetsAt <= now ? '—' : `${Math.floor(w.remaining)}%`;
+        // Weekday timestamps say Today instead of the current weekday.
+        const formatDay = time => time.get_year() === today.get_year() &&
+            time.get_day_of_year() === today.get_day_of_year()
+            ? `${_('Today')} ${time.format('%H:%M')}` : time.format('%a %H:%M');
         const formatReset = (w, style) => {
             const reset = GLib.DateTime.new_from_unix_local(Math.floor(w.resetsAt));
             if (!reset)
                 return '—';
-            const isToday = style === 'weekly' && reset.get_year() === today.get_year() &&
-                reset.get_month() === today.get_month() &&
-                reset.get_day_of_month() === today.get_day_of_month();
-            return isToday ? `${_('Today')} ${reset.format('%H:%M')}` :
-                reset.format(style === 'time' ? '%H:%M' : '%a %H:%M');
+            return style === 'time' ? reset.format('%H:%M') : formatDay(reset);
         };
         const resetText = (w, style) => {
             if (!w?.resetsAt || w.resetsAt <= now)
@@ -117,7 +117,7 @@ class UsageIndicator extends PanelMenu.Button {
         const [fiveHour, weekly] = [300, 10080].map(minutes => windows.find(w => w.minutes === minutes));
         const values = [fiveHour, weekly].map(w => w ? remaining(w).replace('%', '') : '—');
         const resets = this._settings.get_boolean('usage-show-resets')
-            ? ` · ${resetText(fiveHour, 'time')}/${resetText(weekly, 'weekly')}` : '';
+            ? ` · ${resetText(fiveHour, 'time')}/${resetText(weekly, 'day')}` : '';
         const label = `${this._title} (${values.join('/')}${resets})`;
         this._label.text = `${label}${stale ? ' *' : ''}`;
         this.menu.removeAll();
@@ -127,14 +127,14 @@ class UsageIndicator extends PanelMenu.Button {
                 `${period(w)}: ${remaining(w)}`, {reactive: false}));
             if (w.resetsAt) {
                 this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
-                    `${_('Resets')}: ${formatReset(w, w.minutes === 10080 ? 'weekly' : 'weekday')}`,
+                    `${_('Resets')}: ${formatReset(w, 'day')}`,
                     {reactive: false}));
             }
         }
         if (snapshot) {
             const updated = GLib.DateTime.new_from_unix_local(Math.floor(snapshot.updatedAt));
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
-                `${_('Last updated')}: ${updated?.format('%a %H:%M') ?? '—'}`, {reactive: false}));
+                `${_('Last updated')}: ${updated ? formatDay(updated) : '—'}`, {reactive: false}));
         }
         let message = '';
         if (this._error === 'codex-missing')

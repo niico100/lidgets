@@ -89,6 +89,13 @@
       monitor holding the panel, so docking and undocking restores the choice
       that was made on each screen rather than needing another click.</description>
     </key>
+    <key name="drawer-pinned-per-monitor" type="a{sb}">
+      <default>{}</default>
+      <summary>Remembered partial unfold, keyed by monitor size</summary>
+      <description>Used only in manual mode. True where the first unfold
+      step has brought Codex and Claude back into the panel while the other
+      widgets stay in the drawer.</description>
+    </key>
     <key name="drawer-space-fraction" type="i">
       <default>35</default>
       <range min="10" max="80"/>

@@ -18,7 +18,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {geocode, makeJsonFetcher} from './geocode.js';
+import {geocode, makeJsonFetcher, watchNetworkRecovery} from './geocode.js';
 
 
 // WMO weather code -> symbol, per https://open-meteo.com/en/docs
@@ -136,6 +136,7 @@ class WeatherIndicator extends PanelMenu.Button {
         this._lon = null;
         this._city = null;
         this._forecast = null;
+        this._failed = false;
         this._destroyed = false;
         this._requestGeneration = 0;
 
@@ -164,6 +165,15 @@ class WeatherIndicator extends PanelMenu.Button {
         this._buildMenu();
         this._doReload();
         this._restartWeatherTimer();
+
+        // Starting offline also fails the timezone geocode, so with no
+        // forecast at all redo the whole load rather than just the fetch.
+        this._stopNetworkWatch = watchNetworkRecovery(() => {
+            if (!this._forecast)
+                this._doReload();
+            else if (this._failed)
+                this._fetchWeather();
+        });
     }
 
     _restartWeatherTimer() {
@@ -282,11 +292,13 @@ class WeatherIndicator extends PanelMenu.Button {
             if (this._destroyed || generation !== this._requestGeneration)
                 return;
             if (!data || !data.current || !data.hourly || !data.daily) {
+                this._failed = true;
                 if (!this._forecast)
                     this._label.text = '🌐 weather unavailable';
                 return;
             }
             this._forecast = data;
+            this._failed = false;
             this._render();
         });
     }
@@ -426,6 +438,8 @@ class WeatherIndicator extends PanelMenu.Button {
         }
         this._weatherTimeoutId = 0;
         this._reloadId = 0;
+        this._stopNetworkWatch?.();
+        this._stopNetworkWatch = null;
 
         this._cancellable?.cancel();
         this._cancellable = null;

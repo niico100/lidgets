@@ -16,7 +16,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {makeJsonFetcher} from './geocode.js';
+import {makeJsonFetcher, watchNetworkRecovery} from './geocode.js';
 
 const API_ROOT = 'https://api.frankfurter.dev/v2/rate';
 const HTTP_TIMEOUT_SECONDS = 15;
@@ -107,6 +107,10 @@ class CurrencyIndicator extends PanelMenu.Button {
                 this._fetchRate();
                 return GLib.SOURCE_CONTINUE;
             });
+        this._stopNetworkWatch = watchNetworkRecovery(() => {
+            if (this._rate === null || this._failed)
+                this._fetchRate();
+        });
     }
 
     _pair() {
@@ -341,6 +345,8 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._refreshId = 0;
         this._pairReloadId = 0;
         this._collapseId = 0;
+        this._stopNetworkWatch?.();
+        this._stopNetworkWatch = null;
         this._cancellable?.cancel();
         this._cancellable = null;
         this._session = null;
