@@ -6,6 +6,7 @@ ARCHIVE := $(DIST_DIR)/$(UUID).shell-extension.zip
 .PHONY: check doctor pack install
 
 check:
+	@node tests/test_gpus.cjs
 	@PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s tests -p 'test_*.py'
 	@for file in $(SOURCE_DIR)/extension.js $(SOURCE_DIR)/prefs.js $(SOURCE_DIR)/lib/*.js; do \
 		node --check "$$file" || exit 1; \

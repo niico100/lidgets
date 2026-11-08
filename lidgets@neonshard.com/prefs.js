@@ -2,7 +2,7 @@
  * Lidgets preferences.
  *
  * The metrics page is built from the sensors this machine actually exposes,
- * so it never offers a switch for a reading that would only ever show "--".
+ * and remembers removable GPUs so their selections survive disconnects.
  */
 
 import Adw from 'gi://Adw';
@@ -962,12 +962,12 @@ export default class LidgetsPreferences extends ExtensionPreferences {
             adjustment: refreshAdjustment,
         }));
 
-        const sensors = new Sensors();
-        const available = sensors.available();
+        const sensors = new Sensors(settings);
+        let available = sensors.available();
 
         const group = new Adw.PreferencesGroup({
             title: _('Show in the panel'),
-            description: `Detected ${available.length} sensors on this machine. ` +
+            description: 'Connected and remembered GPU sensors are listed here. ' +
                 'Everything is listed in the widget’s dropdown either way — these switches only choose what is shown inline.',
         });
         page.add(group);
@@ -980,34 +980,40 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         const readingsPreview = new Map();
         const current = sensors.sample();
 
-        for (const def of available) {
-            const check = new Gtk.CheckButton({
-                active: settings.get_strv('metrics-show').includes(def.id),
-                valign: Gtk.Align.CENTER,
-            });
+        const rebuildRows = current => {
+            for (const row of readingsPreview.values())
+                group.remove(row);
+            readingsPreview.clear();
+            for (const def of available) {
+                const check = new Gtk.CheckButton({
+                    active: settings.get_strv('metrics-show').includes(def.id),
+                    valign: Gtk.Align.CENTER,
+                });
 
-            const row = new Adw.ActionRow({
-                title: _(def.title),
-                subtitle: current[def.id]?.detail ?? '',
-                activatable: true,
-            });
-            row.add_prefix(check);
-            // Makes the whole row a hit target for the checkbox.
-            row.activatable_widget = check;
+                const row = new Adw.ActionRow({
+                    title: def.gpuName ? `${_(def.title)}: ${def.gpuName}` : _(def.title),
+                    subtitle: current[def.id]?.disconnected ? _('Disconnected') : current[def.id]?.detail ?? '',
+                    activatable: true,
+                });
+                row.add_prefix(check);
+                // Makes the whole row a hit target for the checkbox.
+                row.activatable_widget = check;
 
-            check.connect('toggled', () => {
-                const shown = settings.get_strv('metrics-show');
-                const index = shown.indexOf(def.id);
-                if (check.active && index === -1)
-                    shown.push(def.id);
-                else if (!check.active && index !== -1)
-                    shown.splice(index, 1);
-                settings.set_strv('metrics-show', shown);
-            });
+                check.connect('toggled', () => {
+                    const shown = settings.get_strv('metrics-show');
+                    const index = shown.indexOf(def.id);
+                    if (check.active && index === -1)
+                        shown.push(def.id);
+                    else if (!check.active && index !== -1)
+                        shown.splice(index, 1);
+                    settings.set_strv('metrics-show', shown);
+                });
 
-            group.add(row);
-            readingsPreview.set(def.id, row);
-        }
+                group.add(row);
+                readingsPreview.set(def.id, row);
+            }
+        };
+        rebuildRows(current);
 
         /*
          * Choosing which readings to show is meaningless while the widget
@@ -1019,9 +1025,14 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         // A live preview makes it obvious which sensor is which.
         const previewId = GLib.timeout_add_seconds(GLib.PRIORITY_LOW, 2, () => {
             const readings = sensors.sample();
+            const updated = sensors.available();
+            if (JSON.stringify(updated) !== JSON.stringify(available)) {
+                available = updated;
+                rebuildRows(readings);
+            }
             for (const [id, row] of readingsPreview) {
                 if (readings[id])
-                    row.subtitle = readings[id].detail;
+                    row.subtitle = readings[id].disconnected ? _('Disconnected') : readings[id].detail;
             }
             return GLib.SOURCE_CONTINUE;
         });

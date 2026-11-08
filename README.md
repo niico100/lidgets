@@ -175,7 +175,12 @@ machine supports.
 ### Metrics
 
 Read from `/proc` and `/sys`. `available()` advertises only what the machine
-can actually answer, so no metric ever shows a permanent `--`.
+can answer. Each GPU has separate, named choices for its supported readings.
+Selected removable GPUs remain on the panel as **Disconnected** when absent,
+including after a login with the GPU unplugged. Reconnecting resumes readings
+automatically; device discovery runs every five seconds. NVIDIA selections use
+the GPU UUID, so changing ports or DRM card numbers keeps the same selection.
+Other GPUs use their PCI identity and slot. Unsupported GPU readings show `--`.
 
 GPU support is per vendor, because they expose entirely different things:
 
@@ -187,15 +192,17 @@ GPU support is per vendor, because they expose entirely different things:
 
 NVIDIA needs a subprocess, so it is sampled on its own 5-second clock with the
 last answer reused in between, rather than at the panel's rate. Detection
-requires `/proc/driver/nvidia/gpus` to be non-empty — `nvidia-smi` is often
-installed on machines with no NVIDIA card, since it ships with CUDA tooling.
+uses the NVIDIA driver’s per-device information and matches query results by
+UUID, rather than assuming the first NVIDIA card is the selected card.
 
 Free space is queried asynchronously because it can touch a real filesystem;
 everything else is memory-backed and sampled synchronously.
 
 Inline metric readings can use compact symbolic icons or text labels (for
 example, `CPU 12%`), selected in preferences. Their dropdown keeps the full
-descriptive names. The symbolic icon family is derived from the GPL-licensed
+descriptive names. GPU readings include the GPU name in either prefix mode
+(for example, `GPU: RTX 4070 64%`). Previously detected GPUs remain available
+in preferences so disconnected selections can still be removed. The symbolic icon family is derived from the GPL-licensed
 [Vitals](https://github.com/corecoding/Vitals) GNOME icon set.
 
 ### Folding

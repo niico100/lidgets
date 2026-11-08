@@ -16,7 +16,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {Sensors, METRIC_DEFS} from './sensors.js';
+import {Sensors} from './sensors.js';
 
 export const MetricsIndicator = GObject.registerClass(
 class MetricsIndicator extends PanelMenu.Button {
@@ -24,7 +24,7 @@ class MetricsIndicator extends PanelMenu.Button {
         super._init(0.0, _('System Metrics'), false);
 
         this._settings = settings;
-        this._sensors = new Sensors();
+        this._sensors = new Sensors(settings);
         this._available = this._sensors.available();
         this._tickId = 0;
         this._detailLabels = new Map();
@@ -79,12 +79,12 @@ class MetricsIndicator extends PanelMenu.Button {
         // contain duplicates or an arbitrarily long list. At most one actor
         // per metric definition can ever be useful.
         const selected = [...new Set(this._settings.get_strv('metrics-show'))]
-            .slice(0, METRIC_DEFS.length);
+            .slice(0, this._available.length);
         const useSymbols = this._settings.get_boolean('metrics-show-labels');
 
         for (const id of selected) {
-            const def = METRIC_DEFS.find(candidate => candidate.id === id);
-            if (!def || !this._available.some(candidate => candidate.id === id))
+            const def = this._available.find(candidate => candidate.id === id);
+            if (!def)
                 continue;
 
             const metric = new St.BoxLayout({
@@ -151,7 +151,7 @@ class MetricsIndicator extends PanelMenu.Button {
 
             const row = new St.BoxLayout({x_expand: true});
             row.add_child(new St.Label({
-                text: _(def.title),
+                text: def.gpuName ? `${_(def.title)}: ${def.gpuName}` : _(def.title),
                 x_expand: true,
                 y_align: Clutter.ActorAlign.CENTER,
             }));
@@ -171,6 +171,12 @@ class MetricsIndicator extends PanelMenu.Button {
 
     _tick() {
         const readings = this._sensors.sample();
+        const available = this._sensors.available();
+        if (JSON.stringify(available) !== JSON.stringify(this._available)) {
+            this._available = available;
+            this._rebuildPanel();
+            this._buildMenu();
+        }
 
         // Keep the established boolean key so existing settings remain valid:
         // true selects symbols and false selects text.
@@ -180,14 +186,14 @@ class MetricsIndicator extends PanelMenu.Button {
             const reading = readings[id];
             if (!reading)
                 continue;
-            label.text = useSymbols
-                ? reading.short
-                : `${def.name} ${reading.short}`;
+            const short = reading.disconnected ? _('Disconnected') : reading.short;
+            label.text = def.gpuName || !useSymbols
+                ? `${def.name} ${short}` : short;
         }
 
         for (const [id, label] of this._detailLabels) {
             if (readings[id])
-                label.text = readings[id].detail;
+                label.text = readings[id].disconnected ? _('Disconnected') : readings[id].detail;
         }
     }
 
