@@ -186,12 +186,12 @@
     <key name="metrics-show" type="as">
       <default>['cpu','ram','disk']</default>
       <summary>Metrics shown in the panel</summary>
-      <description>Ordered list of metric ids. Remembered disconnected GPUs remain visible.</description>
+      <description>Ordered list of metric ids. Disconnected GPUs stay selected but hide from the panel.</description>
     </key>
     <key name="metrics-known-gpus" type="s">
       <default>'[]'</default>
       <summary>Remembered GPU identities, names and metrics</summary>
-      <description>JSON metadata keeps selected removable GPUs visible while disconnected.</description>
+      <description>JSON metadata remembers selected removable GPUs while disconnected.</description>
     </key>
     <key name="metrics-show-labels" type="b">
       <default>true</default>

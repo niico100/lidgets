@@ -176,9 +176,9 @@ machine supports.
 
 Read from `/proc` and `/sys`. `available()` advertises only what the machine
 can answer. Each GPU has separate, named choices for its supported readings.
-Selected removable GPUs remain on the panel as **Disconnected** when absent,
-including after a login with the GPU unplugged. Reconnecting resumes readings
-automatically; device discovery runs every five seconds. NVIDIA selections use
+Selected removable GPUs hide from the panel when absent, including after a
+login with the GPU unplugged. The dropdown still shows **Disconnected**.
+Reconnecting restores the panel reading automatically; device discovery runs every five seconds. NVIDIA selections use
 the GPU UUID, so changing ports or DRM card numbers keeps the same selection.
 Other GPUs use their PCI identity and slot. Unsupported GPU readings show `--`.
 

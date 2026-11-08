@@ -109,15 +109,16 @@ class MetricsIndicator extends PanelMenu.Button {
             });
             metric.add_child(label);
             this._panelBox.add_child(metric);
-            this._panelLabels.set(id, {label, def});
+            this._panelLabels.set(id, {label, def, metric});
         }
 
-        if (this._panelLabels.size === 0) {
-            this._panelBox.add_child(new St.Label({
-                text: '⋯',
-                y_align: Clutter.ActorAlign.CENTER,
-            }));
-        }
+        // Keep the dropdown reachable if every selected GPU is unplugged.
+        this._emptyLabel = new St.Label({
+            text: '⋯',
+            y_align: Clutter.ActorAlign.CENTER,
+            visible: this._panelLabels.size === 0,
+        });
+        this._panelBox.add_child(this._emptyLabel);
     }
 
     _restartTimer() {
@@ -182,14 +183,18 @@ class MetricsIndicator extends PanelMenu.Button {
         // true selects symbols and false selects text.
         const useSymbols = this._settings.get_boolean('metrics-show-labels');
 
-        for (const [id, {label, def}] of this._panelLabels) {
+        for (const [id, {label, def, metric}] of this._panelLabels) {
             const reading = readings[id];
             if (!reading)
                 continue;
-            const short = reading.disconnected ? _('Disconnected') : reading.short;
+            metric.visible = !reading.disconnected;
+            if (reading.disconnected)
+                continue;
             label.text = def.gpuName || !useSymbols
-                ? `${def.name} ${short}` : short;
+                ? `${def.name} ${reading.short}` : reading.short;
         }
+        this._emptyLabel.visible = ![...this._panelLabels.values()]
+            .some(({metric}) => metric.visible);
 
         for (const [id, label] of this._detailLabels) {
             if (readings[id])
