@@ -133,7 +133,7 @@ class MarketsIndicator extends PanelMenu.Button {
             return this._failed.has(ticker.symbol) ? `${name} ⚠` : `${name} …`;
         const stale = this._failed.has(ticker.symbol) ? '*' : '';
         return `${name} ${formatPrice(quote.price, quote.currency, true)}` +
-            ` (${formatChange(quote.changes['24h'])})${stale}`;
+            ` (${formatChange(quote.changes['24h'], 1)})${stale}`;
     }
 
     _popupText(ticker) {

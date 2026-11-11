@@ -137,11 +137,11 @@ export function shortSymbol(symbol) {
 }
 
 /*
- * Panel prices drop the cents once they stop mattering; small coins keep
- * enough digits to show any movement at all.
+ * Panel prices round to whole units; small coins keep enough digits to show
+ * any movement at all.
  */
 export function formatPrice(value, currency, compact = false) {
-    const digits = value >= 1000 && compact ? 0 : value < 1 ? 4 : 2;
+    const digits = value < 1 ? (compact ? 2 : 4) : compact ? 0 : 2;
     const options = {minimumFractionDigits: digits, maximumFractionDigits: digits};
     try {
         if (currency) {
@@ -156,9 +156,9 @@ export function formatPrice(value, currency, compact = false) {
     return currency ? `${number} ${currency}` : number;
 }
 
-export function formatChange(percent) {
+export function formatChange(percent, digits = 2) {
     if (!Number.isFinite(percent))
         return '—';
     const sign = percent > 0 ? '+' : percent < 0 ? '−' : '';
-    return `${sign}${Math.abs(percent).toFixed(2)}%`;
+    return `${sign}${Math.abs(percent).toFixed(digits)}%`;
 }
