@@ -4,7 +4,8 @@
 
 - Click a ticker in the markets dropdown to unfold a price graph with 1d,
   1w, 1m, 1y and 5y ranges. Panel prices round to whole units, and the price and
-  24-hour change can each be hidden from the panel.
+  24-hour change can each be hidden from the panel. Switched off, the widget
+  stays in the panel as a ₿ placeholder.
 - Add an optional stocks and crypto widget. Search for tickers in
   **Preferences → Markets** and tick which prices show in the panel with their
   24-hour change; the dropdown lists every ticker with 24-hour, 7-day, 1-month

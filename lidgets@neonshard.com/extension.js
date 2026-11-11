@@ -32,7 +32,8 @@ const WIDGETS = [
     {key: 'clocks-enabled', role: 'lidgets-clocks', ctor: ClocksIndicator},
     {key: 'weather-enabled', role: 'lidgets-weather', ctor: WeatherIndicator},
     {key: 'currency-enabled', role: 'lidgets-currency', ctor: CurrencyIndicator},
-    {key: 'markets-enabled', role: 'lidgets-markets', ctor: MarketsIndicator},
+    // Switched off, it stays in the panel as a placeholder.
+    {key: 'markets-enabled', role: 'lidgets-markets', ctor: MarketsIndicator, placeholder: true},
     {key: 'metrics-enabled', role: 'lidgets-metrics', ctor: MetricsIndicator},
     {key: 'codex-enabled', role: 'lidgets-codex', ctor: CodexIndicator},
     {key: 'claude-enabled', role: 'lidgets-claude', ctor: ClaudeIndicator},
@@ -227,7 +228,7 @@ export default class LidgetsExtension extends Extension {
 
         let offset = 0;
         for (const widget of WIDGETS) {
-            if (!this._settings.get_boolean(widget.key))
+            if (!widget.placeholder && !this._settings.get_boolean(widget.key))
                 continue;
 
             // Reclaim the role if a previous run died before releasing it.

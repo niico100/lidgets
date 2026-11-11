@@ -27,6 +27,7 @@ const HTTP_TIMEOUT_SECONDS = 15;
 const REFRESH_SECONDS = 5 * 60;
 const PANEL_ICON = '📈';
 const PANEL_SEPARATOR = '  ·  ';
+const PLACEHOLDER = '₿';
 
 export const MarketsIndicator = GObject.registerClass(
 class MarketsIndicator extends PanelMenu.Button {
@@ -55,6 +56,21 @@ class MarketsIndicator extends PanelMenu.Button {
             style_class: 'lidgets-label',
         });
         this.add_child(this._label);
+
+        /*
+         * Switched off in preferences: keep a placeholder in the panel, like
+         * the idle currency widget, and fetch nothing. Toggling the setting
+         * rebuilds every widget, so this is decided once here.
+         */
+        if (!settings.get_boolean('markets-enabled')) {
+            this._label.text = PLACEHOLDER;
+            this.menu.addAction(_('Show stock and crypto prices'),
+                () => settings.set_boolean('markets-enabled', true));
+            this.connect('destroy', () => {
+                this._destroyed = true;
+            });
+            return;
+        }
 
         this._session = new Soup.Session({
             timeout: HTTP_TIMEOUT_SECONDS,
