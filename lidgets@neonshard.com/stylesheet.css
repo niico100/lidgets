@@ -72,3 +72,32 @@
     margin: 3px 5px;
     padding: 2px 9px;
 }
+
+/* Price graph unfolded under a ticker in the markets dropdown. */
+.lidgets-graph {
+    spacing: 6px;
+    min-width: 320px;
+}
+
+.lidgets-graph-ranges {
+    spacing: 4px;
+}
+
+.lidgets-graph-range {
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 0.9em;
+}
+
+.lidgets-graph-range:hover {
+    background-color: rgba(127, 127, 127, 0.2);
+}
+
+.lidgets-graph-range:checked {
+    background-color: rgba(127, 127, 127, 0.35);
+    font-weight: bold;
+}
+
+.lidgets-graph-area {
+    height: 120px;
+}

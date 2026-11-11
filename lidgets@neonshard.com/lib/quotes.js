@@ -36,6 +36,43 @@ export const PERIODS = [
     {id: '6m', label: '6m'},
 ];
 
+// Ranges for the dropdown graph, with an interval that gives ~50-400 points.
+export const GRAPH_RANGES = [
+    {id: '1d', label: '1d', range: '1d', interval: '5m'},
+    {id: '1w', label: '1w', range: '5d', interval: '30m'},
+    {id: '1m', label: '1m', range: '1mo', interval: '1h'},
+    {id: '1y', label: '1y', range: '1y', interval: '1d'},
+    {id: '5y', label: '5y', range: '5y', interval: '1wk'},
+];
+
+export function historyUrl(symbol, rangeId) {
+    const r = GRAPH_RANGES.find(g => g.id === rangeId) ?? GRAPH_RANGES[0];
+    return `${CHART_ROOT}/${encodeURIComponent(symbol)}` +
+        `?range=${r.range}&interval=${r.interval}`;
+}
+
+/*
+ * Returns {currency, points: [[seconds, close]]} with at least two points,
+ * or null. Gaps (null closes) are dropped.
+ */
+export function parseHistory(data) {
+    const result = data?.chart?.result?.[0];
+    const timestamps = Array.isArray(result?.timestamp) ? result.timestamp : [];
+    const closes = result?.indicators?.quote?.[0]?.close ?? [];
+    let currency = typeof result?.meta?.currency === 'string' ? result.meta.currency : '';
+    let divisor = 1;
+    if (MINOR_UNITS[currency])
+        [currency, divisor] = MINOR_UNITS[currency];
+
+    const points = [];
+    for (let i = 0; i < timestamps.length; i++) {
+        const close = Number(closes[i]);
+        if (Number.isFinite(close) && close > 0 && Number.isFinite(timestamps[i]))
+            points.push([timestamps[i], close / divisor]);
+    }
+    return points.length >= 2 ? {currency, points} : null;
+}
+
 export function chartUrl(symbol) {
     return `${CHART_ROOT}/${encodeURIComponent(symbol)}?range=6mo&interval=1d`;
 }
