@@ -65,6 +65,8 @@ class MarketsIndicator extends PanelMenu.Button {
 
         this._settingsId = settings.connect('changed::market-symbols',
             () => this._queueReload());
+        this._displayIds = ['market-panel-price', 'market-panel-change'].map(key =>
+            settings.connect(`changed::${key}`, () => this._render()));
         this.connect('destroy', () => this._onDestroy());
 
         this._render();
@@ -150,8 +152,14 @@ class MarketsIndicator extends PanelMenu.Button {
         if (!quote)
             return this._failed.has(ticker.symbol) ? `${name} ⚠` : `${name} …`;
         const stale = this._failed.has(ticker.symbol) ? '*' : '';
-        return `${name} ${formatPrice(quote.price, quote.currency, true)}` +
-            ` (${formatChange(quote.changes['24h'], 1)})${stale}`;
+        const parts = [name];
+        if (this._settings.get_boolean('market-panel-price'))
+            parts.push(formatPrice(quote.price, quote.currency, true));
+        if (this._settings.get_boolean('market-panel-change')) {
+            const change = formatChange(quote.changes['24h'], 1);
+            parts.push(parts.length > 1 ? `(${change})` : change);
+        }
+        return parts.join(' ') + stale;
     }
 
     _popupText(ticker) {
@@ -428,6 +436,9 @@ class MarketsIndicator extends PanelMenu.Button {
         this._fetchJson = null;
         if (this._settingsId)
             this._settings.disconnect(this._settingsId);
+        for (const id of this._displayIds ?? [])
+            this._settings.disconnect(id);
+        this._displayIds = [];
         this._settingsId = 0;
     }
 });

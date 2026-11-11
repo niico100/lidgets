@@ -704,6 +704,15 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         settings.bind('markets-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(enabled);
 
+        for (const [key, title] of [
+            ['market-panel-price', _('Show price in panel')],
+            ['market-panel-change', _('Show 24-hour change in panel')],
+        ]) {
+            const row = new Adw.SwitchRow({title});
+            settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
+            options.add(row);
+        }
+
         const list = new Adw.PreferencesGroup({
             title: _('Tickers'),
             description: _('Ticked prices show in the panel with their 24-hour change. Every ticker is listed in the dropdown with its 24-hour, 7-day, 1-month and 6-month change.'),

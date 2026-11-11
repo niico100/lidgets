@@ -67,6 +67,15 @@
       <default>false</default>
       <summary>Show stock and crypto prices</summary>
     </key>
+    <key name="market-panel-price" type="b">
+      <default>true</default>
+      <summary>Show ticker prices in the panel</summary>
+    </key>
+    <key name="market-panel-change" type="b">
+      <default>true</default>
+      <summary>Show 24-hour change in the panel</summary>
+      <description>With both price and change off, panel tickers show only their symbol.</description>
+    </key>
     <key name="market-symbols" type="a(ssb)">
       <default>[('BTC-USD', 'Bitcoin USD', true)]</default>
       <summary>Tickers to follow</summary>
