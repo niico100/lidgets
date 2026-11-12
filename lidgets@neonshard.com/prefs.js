@@ -978,7 +978,8 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         const group = new Adw.PreferencesGroup({
             title: _('Show in the panel'),
             description: 'Connected and remembered GPU sensors are listed here. ' +
-                'Everything is listed in the widget’s dropdown either way — these switches only choose what is shown inline.',
+                'Ticked readings show in the panel left to right in this order; use the arrows to reorder them. ' +
+                'Everything is listed in the widget’s dropdown either way.',
         });
         page.add(group);
 
@@ -1017,13 +1018,45 @@ export default class LidgetsPreferences extends ExtensionPreferences {
             options.add(primaryRow);
         };
 
+        /*
+         * Rows run top to bottom in panel order (left to right): shown
+         * readings first, in metrics-show order, with arrows to reorder them,
+         * then everything else. Ticking one adds it at the right-hand end.
+         */
+        let lastReadings = current;
+        let rebuildId = 0;
+        const queueRebuild = () => {
+            // Deferred so a row is never removed from inside its own signal.
+            if (rebuildId === 0) {
+                rebuildId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                    rebuildId = 0;
+                    rebuildRows(lastReadings);
+                    return GLib.SOURCE_REMOVE;
+                });
+            }
+        };
         const rebuildRows = current => {
+            lastReadings = current;
             for (const row of readingsPreview.values())
                 group.remove(row);
             readingsPreview.clear();
-            for (const def of available) {
+            const ids = new Set(available.map(def => def.id));
+            const shown = settings.get_strv('metrics-show').filter(id => ids.has(id));
+            const ordered = [
+                ...shown.map(id => available.find(def => def.id === id)),
+                ...available.filter(def => !shown.includes(def.id)),
+            ];
+            const move = (index, delta) => {
+                const order = [...shown];
+                [order[index], order[index + delta]] = [order[index + delta], order[index]];
+                const rest = settings.get_strv('metrics-show').filter(id => !ids.has(id));
+                settings.set_strv('metrics-show', [...order, ...rest]);
+                queueRebuild();
+            };
+            for (const def of ordered) {
+                const index = shown.indexOf(def.id);
                 const check = new Gtk.CheckButton({
-                    active: settings.get_strv('metrics-show').includes(def.id),
+                    active: index !== -1,
                     valign: Gtk.Align.CENTER,
                 });
 
@@ -1036,14 +1069,26 @@ export default class LidgetsPreferences extends ExtensionPreferences {
                 // Makes the whole row a hit target for the checkbox.
                 row.activatable_widget = check;
 
+                if (index !== -1) {
+                    const up = makeFlatButton('go-up-symbolic', _('Move left in the panel'));
+                    up.sensitive = index > 0;
+                    up.connect('clicked', () => move(index, -1));
+                    const down = makeFlatButton('go-down-symbolic', _('Move right in the panel'));
+                    down.sensitive = index < shown.length - 1;
+                    down.connect('clicked', () => move(index, 1));
+                    row.add_suffix(up);
+                    row.add_suffix(down);
+                }
+
                 check.connect('toggled', () => {
-                    const shown = settings.get_strv('metrics-show');
-                    const index = shown.indexOf(def.id);
-                    if (check.active && index === -1)
-                        shown.push(def.id);
-                    else if (!check.active && index !== -1)
-                        shown.splice(index, 1);
-                    settings.set_strv('metrics-show', shown);
+                    const selected = settings.get_strv('metrics-show');
+                    const at = selected.indexOf(def.id);
+                    if (check.active && at === -1)
+                        selected.push(def.id);
+                    else if (!check.active && at !== -1)
+                        selected.splice(at, 1);
+                    settings.set_strv('metrics-show', selected);
+                    queueRebuild();
                 });
 
                 group.add(row);
@@ -1076,6 +1121,8 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         });
         page.connect('destroy', () => {
             GLib.source_remove(previewId);
+            if (rebuildId !== 0)
+                GLib.source_remove(rebuildId);
             sensors.destroy();
         });
 
