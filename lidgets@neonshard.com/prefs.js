@@ -702,7 +702,7 @@ export default class LidgetsPreferences extends ExtensionPreferences {
 
         const enabled = new Adw.SwitchRow({
             title: _('Show stock and crypto prices'),
-            subtitle: _('Off leaves ₿ $ in the panel; click it for every price'),
+            subtitle: _('Off leaves a chart icon in the panel; click it for every price'),
         });
         settings.bind('markets-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(enabled);

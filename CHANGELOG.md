@@ -5,7 +5,7 @@
 - Click a ticker in the markets dropdown to unfold a price graph with 1d,
   1w, 1m, 1y and 5y ranges. Panel prices round to whole units, and the price and
   24-hour change can each be hidden from the panel. Switched off, the widget
-  stays in the panel as a ₿ $ button whose dropdown still lists every price. It also shows ₿ $
+  stays in the panel as a chart icon whose dropdown still lists every price. It also shows the icon
   when no ticker, price or change is selected for the panel.
 - Add an optional stocks and crypto widget. Search for tickers in
   **Preferences → Markets** and tick which prices show in the panel with their

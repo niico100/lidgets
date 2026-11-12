@@ -27,7 +27,8 @@ const HTTP_TIMEOUT_SECONDS = 15;
 const REFRESH_SECONDS = 5 * 60;
 const PANEL_SEPARATOR = '  ·  ';
 // Shown whenever no price or change is in the panel; names alone say nothing.
-const PLACEHOLDER = '₿ $';
+const ICON_FILE = Gio.File.new_for_uri(import.meta.url).get_parent().get_parent()
+    .get_child('icons').get_child('markets-symbolic.svg');
 
 export const MarketsIndicator = GObject.registerClass(
 class MarketsIndicator extends PanelMenu.Button {
@@ -50,15 +51,25 @@ class MarketsIndicator extends PanelMenu.Button {
         this._menuKey = null;
         this._rebuilding = false;
 
+        // A panel button lays out one child, so icon and label share a box.
+        const box = new St.BoxLayout({y_align: Clutter.ActorAlign.CENTER});
+        this._icon = new St.Icon({
+            gicon: new Gio.FileIcon({file: ICON_FILE}),
+            style_class: 'system-status-icon',
+            y_align: Clutter.ActorAlign.CENTER,
+        });
         this._label = new St.Label({
-            text: PLACEHOLDER,
+            text: '',
+            visible: false,
             y_align: Clutter.ActorAlign.CENTER,
             style_class: 'lidgets-label',
         });
-        this.add_child(this._label);
+        box.add_child(this._icon);
+        box.add_child(this._label);
+        this.add_child(box);
 
         /*
-         * Switched off in preferences, the panel keeps only a ₿ placeholder,
+         * Switched off in preferences, the panel keeps only a chart icon,
          * but the dropdown still lists every price. Toggling the setting
          * rebuilds every widget, so this is decided once here.
          */
@@ -187,9 +198,11 @@ class MarketsIndicator extends PanelMenu.Button {
         const inPanel = tickers.filter(t => t.inPanel);
         const showValues = this._settings.get_boolean('market-panel-price') ||
             this._settings.get_boolean('market-panel-change');
-        this._label.text = !this._panelOff && showValues && inPanel.length > 0
-            ? inPanel.map(t => this._panelText(t)).join(PANEL_SEPARATOR)
-            : PLACEHOLDER;
+        const showText = !this._panelOff && showValues && inPanel.length > 0;
+        this._icon.visible = !showText;
+        this._label.visible = showText;
+        if (showText)
+            this._label.text = inPanel.map(t => this._panelText(t)).join(PANEL_SEPARATOR);
         this._buildMenu(tickers);
     }
 
