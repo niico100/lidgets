@@ -59,7 +59,20 @@ export class GpuSensors {
         return `${vendor === '1002' ? 'AMD' : vendor === '8086' ? 'Intel' : 'GPU'} ${device}`;
     }
 
-    _discover() {
+    /*
+     * Integrated GPUs share one PCI id across models ("Radeon 740M / 760M /
+     * 780M Graphics"); the CPU name says which one this is.
+     */
+    _shortName(name) {
+        if (name.includes(' / ')) {
+            this._cpuGpu ??= this._io.readText('/proc/cpuinfo')
+                ?.match(/^model name\s*:.*\bw\/ (Radeon [^\n]+)$/m)?.[1]?.trim() ?? '';
+            name = this._cpuGpu || name.split(' / ')[0];
+        }
+        return name.replace(/ Graphics$/, '');
+    }
+
+        _discover() {
         const now = GLib.get_monotonic_time();
         if (this._scanAt !== null && now - this._scanAt < INTERVAL_US)
             return;
@@ -78,8 +91,8 @@ export class GpuSensors {
             const device = pci[2].toLowerCase();
             const info = this._io.readText(`/proc/driver/nvidia/gpus/${slot}/information`) ?? '';
             const uuid = info.match(/^GPU UUID:\s*(\S+)/m)?.[1];
-            const name = (info.match(/^Model:\s*(.+)$/m)?.[1]?.trim() ?? this._pciName(vendor, device))
-                .replace(/^NVIDIA (?:GeForce )?/, '');
+            const name = this._shortName((info.match(/^Model:\s*(.+)$/m)?.[1]?.trim() ??
+                this._pciName(vendor, device)).replace(/^NVIDIA (?:GeForce )?/, ''));
             const id = uuid ?? `${vendor}-${device}-${slot}`;
             const tempPath = this._io.listDir(`${base}/hwmon`)
                 .map(entry => `${base}/hwmon/${entry}/temp1_input`)

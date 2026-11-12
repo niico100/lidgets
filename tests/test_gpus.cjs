@@ -56,7 +56,8 @@ function query(output, successful = true) {
     callback({communicate_utf8_finish: () => [true, output], get_successful: () => successful}, {});
 }
 function advance() { now += 6e6; }
-files.set('/usr/share/hwdata/pci.ids', '1002  AMD\n\t15bf  Radeon 780M\n');
+files.set('/usr/share/hwdata/pci.ids', '1002  AMD\n\t15bf  Phoenix1 [Radeon 740M / 760M / 780M Graphics]\n');
+files.set('/proc/cpuinfo', 'model name\t: AMD Ryzen 7 7840U w/ Radeon 780M Graphics\n');
 add('card0', '10DE', '2786', '0000:01:00.0', 'GPU-4070', 'NVIDIA GeForce RTX 4070');
 add('card1', '1002', '15BF', '0000:65:00.0');
 add('card2', '10DE', '2786', '0000:02:00.0', 'GPU-second', 'NVIDIA GeForce RTX 4070');
