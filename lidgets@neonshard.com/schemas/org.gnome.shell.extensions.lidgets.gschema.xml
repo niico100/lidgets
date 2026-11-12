@@ -202,6 +202,11 @@
       <summary>Remembered GPU identities, names and metrics</summary>
       <description>JSON metadata remembers selected removable GPUs while disconnected.</description>
     </key>
+    <key name="metrics-primary-gpu" type="s">
+      <default>''</default>
+      <summary>Preferred GPU when several are selected</summary>
+      <description>GPU id shown in the panel while connected; otherwise another selected, connected GPU is shown.</description>
+    </key>
     <key name="metrics-show-labels" type="b">
       <default>true</default>
       <summary>Use icons rather than text prefixes for metrics</summary>

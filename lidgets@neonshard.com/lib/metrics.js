@@ -46,6 +46,7 @@ class MetricsIndicator extends PanelMenu.Button {
                 this._rebuildPanel();
                 this._tick();
             }),
+            settings.connect('changed::metrics-primary-gpu', () => this._tick()),
             settings.connect('changed::metrics-show-labels', () => {
                 this._rebuildPanel();
                 this._tick();
@@ -104,7 +105,7 @@ class MetricsIndicator extends PanelMenu.Button {
             }
 
             const label = new St.Label({
-                text: useSymbols ? '--' : `${def.name} --`,
+                text: useSymbols ? '--' : `${def.label ?? def.name} --`,
                 y_align: Clutter.ActorAlign.CENTER,
             });
             metric.add_child(label);
@@ -183,15 +184,25 @@ class MetricsIndicator extends PanelMenu.Button {
         // true selects symbols and false selects text.
         const useSymbols = this._settings.get_boolean('metrics-show-labels');
 
+        // With several GPUs selected, show one per reading type: the primary
+        // GPU while it is connected, otherwise the first connected one.
+        const primary = this._settings.get_string('metrics-primary-gpu');
+        const gpuShown = new Map();
+        const connected = [...this._panelLabels.values()]
+            .filter(({def}) => def.gpuId && readings[def.id] && !readings[def.id].disconnected);
+        for (const {def} of connected) {
+            if (!gpuShown.has(def.type) || def.gpuId === primary)
+                gpuShown.set(def.type, def.id);
+        }
+
         for (const [id, {label, def, metric}] of this._panelLabels) {
             const reading = readings[id];
             if (!reading)
                 continue;
-            metric.visible = !reading.disconnected;
-            if (reading.disconnected)
+            metric.visible = !reading.disconnected && (!def.gpuId || gpuShown.get(def.type) === id);
+            if (!metric.visible)
                 continue;
-            label.text = def.gpuName || !useSymbols
-                ? `${def.name} ${reading.short}` : reading.short;
+            label.text = useSymbols ? reading.short : `${def.label ?? def.name} ${reading.short}`;
         }
         this._emptyLabel.visible = ![...this._panelLabels.values()]
             .some(({metric}) => metric.visible);

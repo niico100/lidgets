@@ -143,7 +143,9 @@ export class GpuSensors {
             return gpu.types.map(type => ({
                 id: `${type}:${gpu.id}`,
                 name: `${type === 'vram' ? 'VRAM' : 'GPU'}: ${name}`,
-                title: TITLES[type], gpuName: name,
+                title: TITLES[type], gpuName: name, gpuId: gpu.id, type,
+                // Panel text stays as short as the CPU label; the dropdown names the device.
+                label: type === 'vram' ? 'VRAM' : 'GPU',
                 icon: type === 'gpu-temp' ? 'temperature-symbolic.svg'
                     : type === 'vram' ? 'memory-symbolic.svg' : 'gpu-symbolic.svg',
             }));

@@ -989,6 +989,33 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         const readingsPreview = new Map();
         const current = sensors.sample();
 
+        /*
+         * With two or more GPUs, the panel shows one of them: the primary one
+         * while connected, otherwise another selected one that is connected.
+         */
+        let primaryRow = null;
+        const rebuildPrimary = () => {
+            if (primaryRow)
+                options.remove(primaryRow);
+            primaryRow = null;
+            const gpus = [...new Map(available.filter(def => def.gpuId)
+                .map(def => [def.gpuId, def.gpuName])).entries()];
+            if (gpus.length < 2)
+                return;
+            primaryRow = new Adw.ComboRow({
+                title: _('Primary GPU'),
+                subtitle: _('Shown in the panel when connected; otherwise another selected GPU is'),
+                model: Gtk.StringList.new(gpus.map(([, name]) => name)),
+            });
+            const index = gpus.findIndex(([id]) => id === settings.get_string('metrics-primary-gpu'));
+            primaryRow.selected = Math.max(index, 0);
+            if (index < 0)
+                settings.set_string('metrics-primary-gpu', gpus[0][0]);
+            primaryRow.connect('notify::selected', () =>
+                settings.set_string('metrics-primary-gpu', gpus[primaryRow.selected]?.[0] ?? ''));
+            options.add(primaryRow);
+        };
+
         const rebuildRows = current => {
             for (const row of readingsPreview.values())
                 group.remove(row);
@@ -1021,6 +1048,7 @@ export default class LidgetsPreferences extends ExtensionPreferences {
                 group.add(row);
                 readingsPreview.set(def.id, row);
             }
+            rebuildPrimary();
         };
         rebuildRows(current);
 
