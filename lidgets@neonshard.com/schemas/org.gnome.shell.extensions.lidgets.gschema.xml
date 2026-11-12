@@ -76,6 +76,11 @@
       <summary>Show 24-hour change in the panel</summary>
       <description>With both price and change off, panel tickers show only their symbol.</description>
     </key>
+    <key name="market-graphs-expanded" type="b">
+      <default>true</default>
+      <summary>Show every ticker's price graph in the dropdown</summary>
+      <description>Off, a ticker's graph unfolds only when it is clicked.</description>
+    </key>
     <key name="market-symbols" type="a(ssb)">
       <default>[('BTC-USD', 'Bitcoin USD', true)]</default>
       <summary>Tickers to follow</summary>

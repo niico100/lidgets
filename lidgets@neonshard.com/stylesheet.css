@@ -101,3 +101,7 @@
 .lidgets-graph-area {
     height: 120px;
 }
+
+.lidgets-graph-area.lidgets-graph-compact {
+    height: 56px;
+}

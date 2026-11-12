@@ -190,7 +190,7 @@ export default class LidgetsPreferences extends ExtensionPreferences {
             ['remote-enabled', _('Remote desktop banner'),
                 _('A red warning while RDP or VNC is accepting connections')],
         ]) {
-            const row = new Adw.SwitchRow({title, subtitle});
+            const row = new Adw.SwitchRow(subtitle ? {title, subtitle} : {title});
             settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
             // The master switch gates everything, so grey these out when it is off.
             settings.bind('master-enabled', row, 'sensitive',
@@ -707,11 +707,13 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         settings.bind('markets-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(enabled);
 
-        for (const [key, title] of [
+        for (const [key, title, subtitle] of [
             ['market-panel-price', _('Show price in panel')],
             ['market-panel-change', _('Show 24-hour change in panel')],
+            ['market-graphs-expanded', _('Show graphs in the dropdown'),
+                _('Off, click a ticker to unfold its graph')],
         ]) {
-            const row = new Adw.SwitchRow({title});
+            const row = new Adw.SwitchRow(subtitle ? {title, subtitle} : {title});
             settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
             options.add(row);
         }

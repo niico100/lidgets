@@ -49,7 +49,6 @@ class MarketsIndicator extends PanelMenu.Button {
         this._history = new Map();
         this._historyPending = new Set();
         this._expanded = null;
-        this._graph = null;
         this._rows = new Map();
         this._menuKey = null;
         this._rebuilding = false;
@@ -87,8 +86,13 @@ class MarketsIndicator extends PanelMenu.Button {
 
         this._settingsId = settings.connect('changed::market-symbols',
             () => this._queueReload());
-        this._displayIds = ['market-panel-price', 'market-panel-change'].map(key =>
-            settings.connect(`changed::${key}`, () => this._render()));
+        this._displayIds = ['market-panel-price', 'market-panel-change', 'market-graphs-expanded']
+            .map(key => settings.connect(`changed::${key}`, () => this._render()));
+        // Graphs fetch history only when someone looks at them.
+        this.menu.connect('open-state-changed', (_menu, open) => {
+            if (open)
+                this._refreshGraphs();
+        });
         this.connect('destroy', () => this._onDestroy());
 
         this._render();
@@ -216,7 +220,8 @@ class MarketsIndicator extends PanelMenu.Button {
      * collapse or flicker every time a price arrives.
      */
     _buildMenu(tickers) {
-        const key = JSON.stringify(tickers.map(t => [t.symbol, t.name]));
+        const expanded = this._settings.get_boolean('market-graphs-expanded');
+        const key = JSON.stringify([expanded, tickers.map(t => [t.symbol, t.name])]);
         if (key === this._menuKey) {
             for (const ticker of tickers)
                 this._rows.get(ticker.symbol)?.label.clutter_text.set_markup(this._rowMarkup(ticker));
@@ -230,7 +235,8 @@ class MarketsIndicator extends PanelMenu.Button {
         this.menu.removeAll();
         this._rebuilding = false;
         this._rows.clear();
-        this._graph = null;
+        this._graphs = new Map();
+        this._rangeButtons = new Map();
         this._updatedLabel = null;
 
         const heading = new PopupMenu.PopupMenuItem(
@@ -244,17 +250,32 @@ class MarketsIndicator extends PanelMenu.Button {
                 {reactive: false, can_focus: false}));
         }
 
+        // Shown graphs share one range, picked once at the top.
+        if (expanded && tickers.length > 0) {
+            const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+            item.add_child(this._buildRangeRow());
+            this.menu.addMenuItem(item);
+        }
+
         let reopen = null;
         for (const ticker of tickers) {
+            if (expanded) {
+                const row = new PopupMenu.PopupMenuItem('', {reactive: false, can_focus: false});
+                row.label.clutter_text.set_markup(this._rowMarkup(ticker));
+                this.menu.addMenuItem(row);
+                this.menu.addMenuItem(this._buildGraph(ticker.symbol, true));
+                this._rows.set(ticker.symbol, row);
+                continue;
+            }
             const row = new PopupMenu.PopupSubMenuMenuItem('', false);
             row.label.clutter_text.set_markup(this._rowMarkup(ticker));
-            row.menu.addMenuItem(this._buildGraph(ticker.symbol));
+            row.menu.addMenuItem(this._buildGraph(ticker.symbol, false));
             row.menu.connect('open-state-changed', (_menu, open) => {
                 if (this._rebuilding)
                     return;
                 if (open) {
                     this._expanded = ticker.symbol;
-                    this._showGraph(ticker.symbol);
+                    this._refreshGraphs();
                 } else if (this._expanded === ticker.symbol) {
                     this._expanded = null;
                 }
@@ -279,19 +300,12 @@ class MarketsIndicator extends PanelMenu.Button {
             reopen.menu.open(false);
         else
             this._expanded = null;
+        if (this.menu.isOpen)
+            this._refreshGraphs();
     }
 
-    _buildGraph(symbol) {
-        const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
-        const box = new St.BoxLayout({
-            orientation: Clutter.Orientation.VERTICAL,
-            x_expand: true,
-            style_class: 'lidgets-graph',
-        });
-        item.add_child(box);
-
+    _buildRangeRow() {
         const buttonRow = new St.BoxLayout({style_class: 'lidgets-graph-ranges'});
-        const buttons = new Map();
         for (const range of GRAPH_RANGES) {
             const button = new St.Button({
                 label: range.label,
@@ -301,39 +315,62 @@ class MarketsIndicator extends PanelMenu.Button {
             });
             button.connect('clicked', () => {
                 this._range = range.id;
-                this._showGraph(symbol);
+                this._refreshGraphs();
             });
-            buttons.set(range.id, button);
+            this._rangeButtons.set(range.id, button);
             buttonRow.add_child(button);
         }
-        box.add_child(buttonRow);
+        return buttonRow;
+    }
 
-        const summary = new St.Label({text: '…', style_class: 'lidgets-dim'});
-        box.add_child(summary);
+    /*
+     * Compact graphs sit under every ticker at once, so they skip the summary
+     * line; the row above already carries the changes.
+     */
+    _buildGraph(symbol, compact) {
+        const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+        const box = new St.BoxLayout({
+            orientation: Clutter.Orientation.VERTICAL,
+            x_expand: true,
+            style_class: 'lidgets-graph',
+        });
+        item.add_child(box);
 
-        const area = new St.DrawingArea({style_class: 'lidgets-graph-area', x_expand: true});
+        let summary = null;
+        if (!compact) {
+            box.add_child(this._buildRangeRow());
+            summary = new St.Label({text: '…', style_class: 'lidgets-dim'});
+            box.add_child(summary);
+        }
+
+        const area = new St.DrawingArea({
+            style_class: compact ? 'lidgets-graph-area lidgets-graph-compact' : 'lidgets-graph-area',
+            x_expand: true,
+        });
         area.connect('repaint', () => this._paintGraph(area, symbol));
         box.add_child(area);
 
-        item._lidgetsGraph = {symbol, buttons, summary, area};
-        this._graphs ??= new Map();
-        this._graphs.set(symbol, item._lidgetsGraph);
-        item.connect('destroy', () => {
-            if (this._graphs?.get(symbol) === item._lidgetsGraph)
-                this._graphs.delete(symbol);
-        });
+        this._graphs.set(symbol, {symbol, summary, area});
         return item;
     }
 
-    _showGraph(symbol) {
-        const graph = this._graphs?.get(symbol);
-        if (!graph)
-            return;
-        this._graph = graph;
-        for (const [id, button] of graph.buttons)
+    // Graphs on screen: every one when expanded, else the unfolded ticker's.
+    _visibleGraphs() {
+        if (!this._graphs || !this.menu.isOpen)
+            return [];
+        if (this._settings.get_boolean('market-graphs-expanded'))
+            return [...this._graphs.values()];
+        const graph = this._graphs.get(this._expanded);
+        return graph ? [graph] : [];
+    }
+
+    _refreshGraphs() {
+        for (const [id, button] of this._rangeButtons ?? [])
             button.checked = id === this._range;
-        this._updateGraph();
-        this._loadHistory(symbol, this._range);
+        for (const graph of this._visibleGraphs()) {
+            this._updateGraph(graph);
+            this._loadHistory(graph.symbol, this._range);
+        }
     }
 
     _historyKey(symbol, range) {
@@ -359,18 +396,18 @@ class MarketsIndicator extends PanelMenu.Button {
                 at: parsed ? GLib.get_monotonic_time() / 1e6 : cached?.at ?? 0,
                 failed: !parsed,
             });
-            if (this._graph?.symbol === symbol && this._range === range)
-                this._updateGraph();
+            const graph = this._graphs?.get(symbol);
+            if (graph && this._range === range)
+                this._updateGraph(graph);
         });
     }
 
-    _updateGraph() {
-        const graph = this._graph;
-        if (!graph)
-            return;
+    _updateGraph(graph) {
         const entry = this._history.get(this._historyKey(graph.symbol, this._range));
         const points = entry?.data?.points;
-        if (!points) {
+        if (!graph.summary) {
+            // Compact graphs have no summary line.
+        } else if (!points) {
             graph.summary.text = entry?.failed ? _('Graph unavailable') : '…';
         } else {
             const values = points.map(p => p[1]);
@@ -387,8 +424,6 @@ class MarketsIndicator extends PanelMenu.Button {
     _paintGraph(area, symbol) {
         const cr = area.get_context();
         try {
-            if (symbol !== this._graph?.symbol)
-                return;
             const points = this._history.get(this._historyKey(symbol, this._range))?.data?.points;
             if (!points)
                 return;
@@ -432,8 +467,8 @@ class MarketsIndicator extends PanelMenu.Button {
 
     _onDestroy() {
         this._destroyed = true;
-        this._graph = null;
         this._graphs = null;
+        this._rangeButtons = null;
         this._generation++;
         for (const id of [this._refreshId, this._reloadId]) {
             if (id)
@@ -445,7 +480,6 @@ class MarketsIndicator extends PanelMenu.Button {
         this._history = new Map();
         this._historyPending = new Set();
         this._expanded = null;
-        this._graph = null;
         this._rows = new Map();
         this._menuKey = null;
         this._rebuilding = false;
