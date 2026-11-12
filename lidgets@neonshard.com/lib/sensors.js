@@ -83,13 +83,13 @@ const N_ = text => text;
  * identifiers, and `title` is the longer form used in the dropdown and prefs.
  */
 export const METRIC_DEFS = [
-    {id: 'cpu', name: 'CPU', icon: 'cpu-symbolic.svg', title: N_('CPU load')},
-    {id: 'cpu-temp', name: 'CPU', icon: 'temperature-symbolic.svg', title: N_('CPU temperature')},
-    {id: 'ram', name: 'RAM', icon: 'memory-symbolic.svg', title: N_('Memory used')},
-    {id: 'swap', name: 'SWAP', icon: 'memory-symbolic.svg', title: N_('Swap used')},
-    {id: 'disk', name: 'DISK', icon: 'storage-symbolic.svg', title: N_('Free space')},
-    {id: 'net', name: 'NET', icon: 'network-symbolic.svg', title: N_('Network throughput')},
-    {id: 'fan', name: 'FAN', icon: 'fan-symbolic.svg', title: N_('Fan speed')},
+    {id: 'cpu', name: 'CPU', icon: 'cpu-symbolic.svg', title: N_('CPU Load')},
+    {id: 'cpu-temp', name: 'CPU', icon: 'temperature-symbolic.svg', title: N_('CPU Temp')},
+    {id: 'ram', name: 'RAM', icon: 'memory-symbolic.svg', title: N_('RAM')},
+    {id: 'swap', name: 'SWAP', icon: 'memory-symbolic.svg', title: N_('Swap')},
+    {id: 'disk', name: 'DISK', icon: 'storage-symbolic.svg', title: N_('Disk Free')},
+    {id: 'net', name: 'NET', icon: 'network-symbolic.svg', title: N_('Network')},
+    {id: 'fan', name: 'FAN', icon: 'fan-symbolic.svg', title: N_('Fan')},
     {id: 'battery', name: 'BAT', icon: 'battery-symbolic.svg', title: N_('Battery')},
 ];
 

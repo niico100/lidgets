@@ -5,8 +5,8 @@ import Gio from 'gi://Gio';
 const INTERVAL_US = 5 * 1e6;
 const TYPES = ['gpu', 'gpu-freq', 'gpu-temp', 'vram'];
 const N_ = text => text;
-const TITLES = {gpu: N_('GPU load'), 'gpu-freq': N_('GPU clock'),
-    'gpu-temp': N_('GPU temperature'), vram: N_('Video memory used')};
+const TITLES = {gpu: N_('GPU Load'), 'gpu-freq': N_('GPU Clock'),
+    'gpu-temp': N_('GPU Temp'), vram: N_('GPU RAM')};
 
 export class GpuSensors {
     constructor(settings, io) {

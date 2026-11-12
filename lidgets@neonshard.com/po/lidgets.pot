@@ -403,8 +403,12 @@ msgstr ""
 msgid "Show in the panel"
 msgstr ""
 
-#: prefs.js:788 lib/sensors.js:98
+#: prefs.js:788
 msgid "Free space"
+msgstr ""
+
+#: lib/sensors.js:98
+msgid "Disk Free"
 msgstr ""
 
 #: prefs.js:795
@@ -448,43 +452,43 @@ msgid "REMOTE DESKTOP ON"
 msgstr ""
 
 #: lib/sensors.js:90
-msgid "CPU load"
+msgid "CPU Load"
 msgstr ""
 
 #: lib/sensors.js:91
-msgid "CPU temperature"
+msgid "CPU Temp"
 msgstr ""
 
 #: lib/sensors.js:92
-msgid "GPU load"
+msgid "GPU Load"
 msgstr ""
 
 #: lib/sensors.js:93
-msgid "GPU clock"
+msgid "GPU Clock"
 msgstr ""
 
 #: lib/sensors.js:94
-msgid "GPU temperature"
+msgid "GPU Temp"
 msgstr ""
 
 #: lib/sensors.js:95
-msgid "Video memory used"
+msgid "GPU RAM"
 msgstr ""
 
 #: lib/sensors.js:96
-msgid "Memory used"
+msgid "RAM"
 msgstr ""
 
 #: lib/sensors.js:97
-msgid "Swap used"
+msgid "Swap"
 msgstr ""
 
 #: lib/sensors.js:99
-msgid "Network throughput"
+msgid "Network"
 msgstr ""
 
 #: lib/sensors.js:100
-msgid "Fan speed"
+msgid "Fan"
 msgstr ""
 
 #: lib/sensors.js:101
