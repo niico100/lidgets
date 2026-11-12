@@ -700,7 +700,10 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         const options = new Adw.PreferencesGroup({title: _('Display')});
         page.add(options);
 
-        const enabled = new Adw.SwitchRow({title: _('Show stock and crypto prices')});
+        const enabled = new Adw.SwitchRow({
+            title: _('Show stock and crypto prices'),
+            subtitle: _('Off leaves a ₿ in the panel; click it for every price'),
+        });
         settings.bind('markets-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
         options.add(enabled);
 
@@ -812,11 +815,7 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         const resultsGroup = new Adw.PreferencesGroup();
         page.add(resultsGroup);
 
-        for (const group of [list, searchGroup, resultsGroup]) {
-            settings.bind('markets-enabled', group, 'sensitive',
-                Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.NO_SENSITIVITY);
-        }
-
+        // Tickers stay editable when the panel is off: the dropdown lists them.
         let resultRows = [];
         const clearResults = () => {
             for (const row of resultRows)

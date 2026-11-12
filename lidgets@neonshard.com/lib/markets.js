@@ -58,19 +58,11 @@ class MarketsIndicator extends PanelMenu.Button {
         this.add_child(this._label);
 
         /*
-         * Switched off in preferences: keep a placeholder in the panel, like
-         * the idle currency widget, and fetch nothing. Toggling the setting
+         * Switched off in preferences, the panel keeps only a ₿ placeholder,
+         * but the dropdown still lists every price. Toggling the setting
          * rebuilds every widget, so this is decided once here.
          */
-        if (!settings.get_boolean('markets-enabled')) {
-            this._label.text = PLACEHOLDER;
-            this.menu.addAction(_('Show stock and crypto prices'),
-                () => settings.set_boolean('markets-enabled', true));
-            this.connect('destroy', () => {
-                this._destroyed = true;
-            });
-            return;
-        }
+        this._panelOff = !settings.get_boolean('markets-enabled');
 
         this._session = new Soup.Session({
             timeout: HTTP_TIMEOUT_SECONDS,
@@ -113,14 +105,6 @@ class MarketsIndicator extends PanelMenu.Button {
             return;
         this._reloadId = GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
             this._reloadId = 0;
-        this._range = GRAPH_RANGES[0].id;
-        this._history = new Map();
-        this._historyPending = new Set();
-        this._expanded = null;
-        this._graph = null;
-        this._rows = new Map();
-        this._menuKey = null;
-        this._rebuilding = false;
             const symbols = new Set(this._tickers().map(t => t.symbol));
             for (const symbol of [...this._quotes.keys()]) {
                 if (!symbols.has(symbol))
@@ -201,8 +185,8 @@ class MarketsIndicator extends PanelMenu.Button {
     _render() {
         const tickers = this._tickers();
         const inPanel = tickers.filter(t => t.inPanel);
-        this._label.text = inPanel.length > 0
-            ? inPanel.map(t => this._panelText(t)).join(PANEL_SEPARATOR)
+        this._label.text = this._panelOff ? PLACEHOLDER
+            : inPanel.length > 0 ? inPanel.map(t => this._panelText(t)).join(PANEL_SEPARATOR)
             : PANEL_ICON;
         this._buildMenu(tickers);
     }
