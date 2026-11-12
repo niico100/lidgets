@@ -25,9 +25,9 @@ import {
 
 const HTTP_TIMEOUT_SECONDS = 15;
 const REFRESH_SECONDS = 5 * 60;
-const PANEL_ICON = '📈';
 const PANEL_SEPARATOR = '  ·  ';
-const PLACEHOLDER = '₿';
+// Shown whenever no price or change is in the panel; names alone say nothing.
+const PLACEHOLDER = '₿ $';
 
 export const MarketsIndicator = GObject.registerClass(
 class MarketsIndicator extends PanelMenu.Button {
@@ -51,7 +51,7 @@ class MarketsIndicator extends PanelMenu.Button {
         this._rebuilding = false;
 
         this._label = new St.Label({
-            text: `${PANEL_ICON} …`,
+            text: PLACEHOLDER,
             y_align: Clutter.ActorAlign.CENTER,
             style_class: 'lidgets-label',
         });
@@ -185,9 +185,11 @@ class MarketsIndicator extends PanelMenu.Button {
     _render() {
         const tickers = this._tickers();
         const inPanel = tickers.filter(t => t.inPanel);
-        this._label.text = this._panelOff ? PLACEHOLDER
-            : inPanel.length > 0 ? inPanel.map(t => this._panelText(t)).join(PANEL_SEPARATOR)
-            : PANEL_ICON;
+        const showValues = this._settings.get_boolean('market-panel-price') ||
+            this._settings.get_boolean('market-panel-change');
+        this._label.text = !this._panelOff && showValues && inPanel.length > 0
+            ? inPanel.map(t => this._panelText(t)).join(PANEL_SEPARATOR)
+            : PLACEHOLDER;
         this._buildMenu(tickers);
     }
 
