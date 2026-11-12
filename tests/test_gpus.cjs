@@ -105,6 +105,12 @@ advance(); sensors.sample();
 dirs.set('/sys/class/drm', ['card1']); advance(); sensors.sample();
 query('GPU-4070, 88, 500, 8000, 55\n');
 assert.equal(sensors.sample()['gpu:GPU-4070'].short, 'Disconnected');
+// Automatic primary: the GPU driving displays, else the NVIDIA card.
+dirs.set('/sys/class/drm', ['card1', 'card7']); advance(); sensors.sample();
+assert.equal(sensors.autoPrimary(), 'GPU-4070');
+dirs.set('/sys/class/drm', ['card1', 'card7', 'card1-eDP-1']);
+files.set('/sys/class/drm/card1-eDP-1/enabled', 'enabled\n'); advance(); sensors.sample();
+assert.equal(sensors.autoPrimary(), '1002-15bf-0000:65:00.0');
 sensors.destroy(); restarted.destroy();
 values['metrics-known-gpus'] = '{invalid';
 assert.doesNotThrow(() => new GpuSensors(settings, io).destroy());

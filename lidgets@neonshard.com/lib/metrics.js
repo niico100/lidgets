@@ -185,8 +185,10 @@ class MetricsIndicator extends PanelMenu.Button {
         const useSymbols = this._settings.get_boolean('metrics-show-labels');
 
         // With several GPUs selected, show one per reading type: the primary
-        // GPU while it is connected, otherwise the first connected one.
-        const primary = this._settings.get_string('metrics-primary-gpu');
+        // (chosen, or else automatic) while connected, otherwise the first
+        // connected one.
+        const primary = this._settings.get_string('metrics-primary-gpu') ||
+            this._sensors.autoPrimaryGpu?.();
         const gpuShown = new Map();
         const connected = [...this._panelLabels.values()]
             .filter(({def}) => def.gpuId && readings[def.id] && !readings[def.id].disconnected);

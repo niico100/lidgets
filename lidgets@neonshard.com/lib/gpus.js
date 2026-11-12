@@ -100,10 +100,15 @@ export class GpuSensors {
             // Even unsupported devices get an explicit unavailable load row.
             if (types.length === 0)
                 types.push('gpu');
+            // Enabled outputs mark the GPU driving the screens.
+            const displays = this._io.listDir('/sys/class/drm')
+                .filter(entry => entry.startsWith(`${card}-`))
+                .filter(entry => this._io.readText(`/sys/class/drm/${entry}/enabled`)?.trim() === 'enabled')
+                .length;
             const previous = this._known.get(id);
             const rememberedTypes = [...new Set([...(previous?.types ?? []), ...types])];
             this._known.set(id, {id, name, types: rememberedTypes});
-            present.set(id, {id, name, kind, base, tempPath, freqPath});
+            present.set(id, {id, name, kind, base, tempPath, freqPath, displays});
         }
         // Dropping cached data prevents a removed/reconnected GPU showing stale load.
         for (const id of this._present.keys()) {
@@ -132,6 +137,16 @@ export class GpuSensors {
         });
         if (JSON.stringify(selected) !== JSON.stringify(migrated))
             this._settings.set_strv('metrics-show', [...new Set(migrated)]);
+    }
+
+    /*
+     * The GPU to show when no primary is chosen: the one driving the most
+     * displays, then a discrete NVIDIA card. Integrated AMD VRAM is a BIOS
+     * carve-out, so its size says nothing about which GPU is bigger.
+     */
+    autoPrimary() {
+        const rank = gpu => gpu.displays * 2 + (gpu.kind === 'nvidia' ? 1 : 0);
+        return [...this._present.values()].sort((a, b) => rank(b) - rank(a))[0]?.id ?? null;
     }
 
     available() {

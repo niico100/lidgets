@@ -210,7 +210,7 @@
     <key name="metrics-primary-gpu" type="s">
       <default>''</default>
       <summary>Preferred GPU when several are selected</summary>
-      <description>GPU id shown in the panel while connected; otherwise another selected, connected GPU is shown.</description>
+      <description>GPU id shown in the panel while connected; otherwise another selected, connected GPU is shown. Empty picks the GPU driving the displays.</description>
     </key>
     <key name="metrics-show-labels" type="b">
       <default>true</default>

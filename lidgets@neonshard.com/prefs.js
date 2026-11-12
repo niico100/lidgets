@@ -1010,15 +1010,13 @@ export default class LidgetsPreferences extends ExtensionPreferences {
                 return;
             primaryRow = new Adw.ComboRow({
                 title: _('Primary GPU'),
-                subtitle: _('Shown in the panel when connected; otherwise another selected GPU is'),
-                model: Gtk.StringList.new(gpus.map(([, name]) => name)),
+                subtitle: _('Shown in the panel when ticked and connected; Automatic picks the one driving your displays'),
+                model: Gtk.StringList.new([_('Automatic'), ...gpus.map(([, name]) => name)]),
             });
             const index = gpus.findIndex(([id]) => id === settings.get_string('metrics-primary-gpu'));
-            primaryRow.selected = Math.max(index, 0);
-            if (index < 0)
-                settings.set_string('metrics-primary-gpu', gpus[0][0]);
+            primaryRow.selected = index + 1;
             primaryRow.connect('notify::selected', () =>
-                settings.set_string('metrics-primary-gpu', gpus[primaryRow.selected]?.[0] ?? ''));
+                settings.set_string('metrics-primary-gpu', gpus[primaryRow.selected - 1]?.[0] ?? ''));
             options.add(primaryRow);
         };
 

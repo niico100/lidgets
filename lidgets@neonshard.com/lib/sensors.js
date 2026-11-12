@@ -205,6 +205,10 @@ export class Sensors {
      * Metric ids this machine can actually populate. Prefs uses this to hide
      * switches for sensors that would only ever read "--".
      */
+    autoPrimaryGpu() {
+        return this._gpus.autoPrimary();
+    }
+
     available() {
         const ok = new Set(['cpu', 'ram', 'disk', 'net']);
 
