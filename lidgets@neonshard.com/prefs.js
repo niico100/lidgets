@@ -753,6 +753,8 @@ export default class LidgetsPreferences extends ExtensionPreferences {
                 const row = new Adw.ActionRow({
                     title: shortSymbol(symbol),
                     subtitle: name === symbol ? '' : `${name}  ·  ${symbol}`,
+                    // Names like “S&P” are plain text, not Pango markup.
+                    use_markup: false,
                     activatable: true,
                 });
 
@@ -854,6 +856,8 @@ export default class LidgetsPreferences extends ExtensionPreferences {
                 const added = tickers.some(t => t[0] === result.symbol);
                 const row = new Adw.ActionRow({
                     title: `${result.symbol}  ·  ${result.name}`,
+                    // Names like “S&P” are plain text, not Pango markup.
+                    use_markup: false,
                     subtitle: [typeLabels[result.type], result.exchange]
                         .filter(Boolean).join('  ·  '),
                     activatable: !added,
