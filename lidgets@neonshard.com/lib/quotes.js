@@ -196,6 +196,8 @@ export function formatPrice(value, currency, compact = false) {
 export function formatChange(percent, digits = 2) {
     if (!Number.isFinite(percent))
         return '—';
-    const sign = percent > 0 ? '+' : percent < 0 ? '−' : '';
-    return `${sign}${Math.abs(percent).toFixed(digits)}%`;
+    // Sign the rounded value, so −0.3% at zero digits reads 0%, not −0%.
+    const text = Math.abs(percent).toFixed(digits);
+    const sign = Number(text) === 0 ? '' : percent > 0 ? '+' : '−';
+    return `${sign}${text}%`;
 }

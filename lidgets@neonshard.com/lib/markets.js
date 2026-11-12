@@ -25,6 +25,9 @@ import {
 
 const HTTP_TIMEOUT_SECONDS = 15;
 const REFRESH_SECONDS = 5 * 60;
+// Readable on the dark shell popup.
+const CHANGE_UP = '#57e389';
+const CHANGE_DOWN = '#f66151';
 const PANEL_SEPARATOR = '  ·  ';
 // Shown whenever no price or change is in the panel; names alone say nothing.
 const ICON_FILE = Gio.File.new_for_uri(import.meta.url).get_parent().get_parent()
@@ -167,30 +170,32 @@ class MarketsIndicator extends PanelMenu.Button {
         if (this._settings.get_boolean('market-panel-price'))
             parts.push(formatPrice(quote.price, quote.currency, true));
         if (this._settings.get_boolean('market-panel-change')) {
-            const change = formatChange(quote.changes['24h'], 1);
+            const change = formatChange(quote.changes['24h'], 0);
             parts.push(parts.length > 1 ? `(${change})` : change);
         }
         return parts.join(' ') + stale;
     }
 
-    _popupText(ticker) {
-        const quote = this._quotes.get(ticker.symbol);
-        const name = shortSymbol(ticker.symbol);
-        if (!quote) {
-            return this._failed.has(ticker.symbol)
-                ? `${name}  ${_('unavailable')}` : `${name}  …`;
-        }
-        const periods = [{id: '24h', label: '24h'}, ...PERIODS]
-            .map(p => `${p.label} ${formatChange(quote.changes[p.id])}`)
-            .join(' · ');
-        const stale = this._failed.has(ticker.symbol) ? ' *' : '';
-        return `${name}  ${formatPrice(quote.price, quote.currency)}  (${periods})${stale}`;
+    // Whole-percent change, green when up and red when down, as Pango markup.
+    _changeMarkup(percent) {
+        const text = formatChange(percent, 0);
+        const color = text.startsWith('+') ? CHANGE_UP : text.startsWith('−') ? CHANGE_DOWN : null;
+        return color ? `<span foreground="${color}">${text}</span>` : text;
     }
 
     _rowMarkup(ticker) {
         const esc = text => GLib.markup_escape_text(text, -1);
-        return `${esc(this._popupText(ticker))}\n` +
-            `<span size="small" alpha="63%">${esc(ticker.name)}</span>`;
+        const quote = this._quotes.get(ticker.symbol);
+        const name = esc(shortSymbol(ticker.symbol));
+        if (!quote) {
+            return this._failed.has(ticker.symbol)
+                ? `${name}  ${esc(_('unavailable'))}` : `${name}  …`;
+        }
+        const periods = [{id: '24h', label: '24h'}, ...PERIODS]
+            .map(p => `${p.label} ${this._changeMarkup(quote.changes[p.id])}`)
+            .join('  ');
+        const stale = this._failed.has(ticker.symbol) ? ' *' : '';
+        return `<b>${name}</b>  ${esc(formatPrice(quote.price, quote.currency))}${stale}    ${periods}`;
     }
 
     _render() {
@@ -371,9 +376,10 @@ class MarketsIndicator extends PanelMenu.Button {
             const values = points.map(p => p[1]);
             const currency = entry.data.currency;
             const change = (values.at(-1) - values[0]) / values[0] * 100;
-            graph.summary.text = `${formatChange(change)}  ·  ` +
-                `${_('Low')} ${formatPrice(Math.min(...values), currency)}  ·  ` +
-                `${_('High')} ${formatPrice(Math.max(...values), currency)}`;
+            const esc = text => GLib.markup_escape_text(text, -1);
+            graph.summary.clutter_text.set_markup(`${this._changeMarkup(change)}  ·  ` +
+                `${esc(`${_('Low')} ${formatPrice(Math.min(...values), currency)}`)}  ·  ` +
+                `${esc(`${_('High')} ${formatPrice(Math.max(...values), currency)}`)}`);
         }
         graph.area.queue_repaint();
     }
