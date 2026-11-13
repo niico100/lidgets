@@ -372,8 +372,7 @@ class WeatherIndicator extends PanelMenu.Button {
         this.menu.addMenuItem(heading);
 
         const location = new PopupMenu.PopupMenuItem(
-            `${_('Weather for')} ${(this._city || _('unknown location'))
-                .slice(0, MAX_DISPLAY_CITY_LENGTH)}`,
+            (this._city || _('Unknown location')).slice(0, MAX_DISPLAY_CITY_LENGTH),
             {reactive: false, can_focus: false});
         location.label.add_style_class_name('lidgets-dim');
         location.label.opacity = 160;

@@ -504,11 +504,7 @@ msgid "Forecast is loading…"
 msgstr ""
 
 #: lib/weather.js:363
-msgid "Weather for"
-msgstr ""
-
-#: lib/weather.js:363
-msgid "unknown location"
+msgid "Unknown location"
 msgstr ""
 
 #: lib/weather.js:370
