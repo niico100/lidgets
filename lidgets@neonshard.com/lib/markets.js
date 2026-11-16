@@ -13,6 +13,7 @@ import Clutter from 'gi://Clutter';
 import GLib from 'gi://GLib';
 import Gio from 'gi://Gio';
 import Soup from 'gi://Soup?version=3.0';
+import PangoCairo from 'gi://PangoCairo';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
@@ -475,9 +476,24 @@ class MarketsIndicator extends PanelMenu.Button {
             const max = Math.max(...values);
             const pad = 4;
             const span = max - min || 1;
+
+            // Time labels along the bottom, in the menu's font, a size down.
+            const node = area.get_theme_node();
+            const font = node.get_font().copy();
+            const size = Math.round(font.get_size() * 0.75);
+            if (font.get_size_is_absolute())
+                font.set_absolute_size(size);
+            else
+                font.set_size(size);
+            const layout = PangoCairo.create_layout(cr);
+            layout.set_font_description(font);
+            layout.set_text('0', -1);
+            const labelHeight = layout.get_pixel_size()[1];
+            const bottom = height - labelHeight - 2;
+
             // Spread by index, not time, so nights and weekends leave no gaps.
             const x = i => pad + i / (values.length - 1) * (width - 2 * pad);
-            const y = v => pad + (max - v) / span * (height - 2 * pad);
+            const y = v => pad + (max - v) / span * (bottom - 2 * pad);
 
             const [r, g, b] = values.at(-1) >= values[0]
                 ? [0.34, 0.80, 0.45] : [0.93, 0.36, 0.36];
@@ -497,11 +513,26 @@ class MarketsIndicator extends PanelMenu.Button {
             cr.setSourceRGBA(r, g, b, 1);
             cr.setLineWidth(1.5);
             cr.strokePreserve();
-            cr.lineTo(x(values.length - 1), height - pad);
-            cr.lineTo(x(0), height - pad);
+            cr.lineTo(x(values.length - 1), bottom - pad);
+            cr.lineTo(x(0), bottom - pad);
             cr.closePath();
             cr.setSourceRGBA(r, g, b, 0.15);
             cr.fill();
+
+            const fg = node.get_foreground_color();
+            for (const {index, text} of axisTicks(points, this._range)) {
+                layout.set_text(text, -1);
+                const [textWidth] = layout.get_pixel_size();
+                const tx = x(index);
+                cr.setSourceRGBA(fg.red / 255, fg.green / 255, fg.blue / 255, 0.35);
+                cr.setLineWidth(1);
+                cr.moveTo(Math.round(tx) + 0.5, bottom - pad);
+                cr.lineTo(Math.round(tx) + 0.5, bottom - pad + 3);
+                cr.stroke();
+                cr.setSourceRGBA(fg.red / 255, fg.green / 255, fg.blue / 255, 0.6);
+                cr.moveTo(Math.min(Math.max(tx - textWidth / 2, 0), width - textWidth), bottom);
+                PangoCairo.show_layout(cr, layout);
+            }
         } finally {
             cr.$dispose();
         }
@@ -539,3 +570,29 @@ class MarketsIndicator extends PanelMenu.Button {
         this._settingsId = 0;
     }
 });
+
+// How each range labels its time axis, as GLib.DateTime formats.
+const AXIS_FORMATS = {
+    '1d': '%H:%M', '1w': '%a', '1m': '%e %b', '1y': '%b', '5y': '%Y', 'max': '%Y',
+};
+const MAX_TICKS = 6;
+
+/*
+ * Ticks where the label changes (a new hour, day, month or year), thinned to
+ * at most MAX_TICKS spread evenly, skipping the very first point since it
+ * usually sits mid-period. The 1d range ticks whole hours only.
+ */
+function axisTicks(points, range) {
+    const format = AXIS_FORMATS[range] ?? '%e %b';
+    const step = range === '1d' ? '%H' : format;
+    const at = (i, fmt) => GLib.DateTime.new_from_unix_local(points[i][0]).format(fmt);
+    const boundaries = [];
+    for (let i = 1; i < points.length; i++) {
+        if (at(i, step) !== at(i - 1, step))
+            boundaries.push(i);
+    }
+    const every = Math.ceil(boundaries.length / MAX_TICKS);
+    return boundaries
+        .filter((_i, n) => n % every === 0)
+        .map(index => ({index, text: at(index, format).trim()}));
+}
