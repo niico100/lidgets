@@ -16,11 +16,13 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
-import {Sensors} from './sensors.js';
+import {Sensors, formatBytes} from './sensors.js';
+import {ProcessSampler} from './processes.js';
 
 // GPU readings under each device's name, in this order.
 const GPU_ORDER = ['gpu', 'vram', 'gpu-temp', 'gpu-freq'];
 const N_ = text => text;
+const TOP_APPS = 5;
 const GPU_LABELS = {gpu: N_('Load'), vram: N_('RAM'), 'gpu-temp': N_('Temp'), 'gpu-freq': N_('Clock')};
 
 export const MetricsIndicator = GObject.registerClass(
@@ -68,6 +70,22 @@ class MetricsIndicator extends PanelMenu.Button {
         this.connect('destroy', () => this._onDestroy());
 
         this._buildMenu();
+
+        // CPU use needs two samples, so take one on open and another a second later.
+        this.menu.connect('open-state-changed', (_menu, open) => {
+            if (this._topId) {
+                GLib.source_remove(this._topId);
+                this._topId = 0;
+            }
+            if (!open)
+                return;
+            this._updateTopApps();
+            this._topId = GLib.timeout_add_seconds(GLib.PRIORITY_DEFAULT, 1, () => {
+                this._topId = 0;
+                this._updateTopApps();
+                return GLib.SOURCE_REMOVE;
+            });
+        });
 
         /*
          * CPU and network are rate metrics, so the first sample only seeds the
@@ -175,6 +193,52 @@ class MetricsIndicator extends PanelMenu.Button {
                 items.push(this._addDetailRow(_(GPU_LABELS[def.type] ?? def.title), def.id, true));
             this._gpuItems.set(gpuId, {items, ids: defs.map(d => d.id)});
         }
+
+        this._topRows = {cpu: this._addTopSection(_('Top CPU')), ram: this._addTopSection(_('Top RAM'))};
+    }
+
+    // A divider and TOP_APPS name/value rows, filled while the menu is open.
+    _addTopSection(title) {
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(title));
+        const rows = [];
+        for (let i = 0; i < TOP_APPS; i++) {
+            const item = new PopupMenu.PopupBaseMenuItem({reactive: false, can_focus: false});
+            const row = new St.BoxLayout({x_expand: true});
+            const name = new St.Label({
+                text: i === 0 ? '…' : '',
+                x_expand: true,
+                y_align: Clutter.ActorAlign.CENTER,
+            });
+            const value = new St.Label({
+                y_align: Clutter.ActorAlign.CENTER,
+                style: 'font-weight: bold; padding-left: 24px;',
+            });
+            row.add_child(name);
+            row.add_child(value);
+            item.add_child(row);
+            this.menu.addMenuItem(item);
+            rows.push({item, name, value});
+        }
+        return rows;
+    }
+
+    _updateTopApps() {
+        if (!this._topRows || !this.menu.isOpen)
+            return;
+        const top = this._processes.sample(TOP_APPS);
+        const fill = (rows, entries, format) => {
+            if (entries.length === 0)
+                return;
+            rows.forEach((row, i) => {
+                row.item.visible = i < entries.length;
+                if (i < entries.length) {
+                    row.name.text = entries[i].name;
+                    row.value.text = format(entries[i]);
+                }
+            });
+        };
+        fill(this._topRows.cpu, top.cpu, e => `${e.percent.toFixed(1)}%`);
+        fill(this._topRows.ram, top.ram, e => formatBytes(e.bytes));
     }
 
     _addDetailRow(text, id, indent = false) {
@@ -247,6 +311,8 @@ class MetricsIndicator extends PanelMenu.Button {
                 label.text = readings[id].disconnected ? _('Disconnected') : readings[id].detail;
         }
 
+        this._updateTopApps();
+
         // Only GPUs that are plugged in get a block.
         for (const {items, ids} of this._gpuItems?.values() ?? []) {
             const present = ids.some(id => readings[id] && !readings[id].disconnected);
@@ -256,6 +322,10 @@ class MetricsIndicator extends PanelMenu.Button {
     }
 
     _onDestroy() {
+        if (this._topId) {
+            GLib.source_remove(this._topId);
+            this._topId = 0;
+        }
         if (this._tickId !== 0) {
             GLib.source_remove(this._tickId);
             this._tickId = 0;
