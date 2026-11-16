@@ -36,6 +36,8 @@ class MetricsIndicator extends PanelMenu.Button {
         this._tickId = 0;
         this._detailLabels = new Map();
         this._gpuItems = new Map();
+        this._processes = new ProcessSampler();
+        this._topId = 0;
         this._panelLabels = new Map();
         this._iconPath = GLib.build_filenamev([extensionPath, 'icons']);
 
