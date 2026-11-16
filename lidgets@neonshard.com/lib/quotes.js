@@ -210,13 +210,13 @@ export function marketStatus(quote, nowSeconds = Date.now() / 1000) {
     return {open: false, seconds: next - nowSeconds};
 }
 
-// "45min", "3hr", "2d".
+// "45m", "3h", "2d".
 export function formatDuration(seconds) {
     const minutes = Math.max(1, Math.round(seconds / 60));
     if (minutes < 60)
-        return `${minutes}min`;
+        return `${minutes}m`;
     const hours = Math.round(minutes / 60);
-    return hours < 24 ? `${hours}hr` : `${Math.round(hours / 24)}d`;
+    return hours < 24 ? `${hours}h` : `${Math.round(hours / 24)}d`;
 }
 
 // Crypto pairs are quoted against a currency, e.g. BTC-USD.

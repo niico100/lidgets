@@ -211,7 +211,7 @@ class MarketsIndicator extends PanelMenu.Button {
         return markup;
     }
 
-    // "NYSE Open (Closes 3hr)" with the state in green or "Closed (Opens 1hr)" in red.
+    // "NYSE Open (Close 3h)" with the state in green or "Closed (Open 1h)" in red.
     _statusMarkup(quote) {
         const {open, seconds} = marketStatus(quote);
         const word = open ? _('Open') : _('Closed');
@@ -219,7 +219,7 @@ class MarketsIndicator extends PanelMenu.Button {
         let detail = '';
         if (seconds !== null) {
             const time = formatDuration(seconds);
-            detail = open ? _('Closes %s').format(time) : _('Opens %s').format(time);
+            detail = open ? _('Close %s').format(time) : _('Open %s').format(time);
             detail = ` (${GLib.markup_escape_text(detail, -1)})`;
         }
         const exchange = quote.exchange ? `${GLib.markup_escape_text(quote.exchange, -1)} ` : '';
