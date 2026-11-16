@@ -218,6 +218,11 @@ export function formatDuration(seconds) {
     return hours < 24 ? `${hours}hr` : `${Math.round(hours / 24)}d`;
 }
 
+// Crypto pairs are quoted against a currency, e.g. BTC-USD.
+export function isCrypto(symbol) {
+    return /-(USD|EUR|GBP)$/.test(symbol);
+}
+
 // "BTC-USD" reads as "BTC" in the panel; stock symbols stay as they are.
 export function shortSymbol(symbol) {
     return symbol.replace(/-(USD|EUR|GBP)$/, '').replace(/^\^/, '');

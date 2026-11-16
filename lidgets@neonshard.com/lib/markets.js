@@ -20,7 +20,7 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 import {makeJsonFetcher, watchNetworkRecovery} from './geocode.js';
 import {
     GRAPH_RANGES, PERIODS, USER_AGENT, chartUrl, formatChange, formatPrice,
-    formatDuration, historyUrl, marketStatus, parseChart, parseHistory, shortSymbol,
+    formatDuration, historyUrl, isCrypto, marketStatus, parseChart, parseHistory, shortSymbol,
 } from './quotes.js';
 
 const HTTP_TIMEOUT_SECONDS = 15;
@@ -276,8 +276,16 @@ class MarketsIndicator extends PanelMenu.Button {
             this.menu.addMenuItem(item);
         }
 
+        // Stocks first, then crypto under its own labelled divider.
+        const crypto = tickers.filter(t => isCrypto(t.symbol));
+        const ordered = [...tickers.filter(t => !isCrypto(t.symbol)), ...crypto];
+        const cryptoStart = crypto.length > 0 && crypto.length < tickers.length
+            ? crypto[0] : null;
+
         let reopen = null;
-        for (const ticker of tickers) {
+        for (const ticker of ordered) {
+            if (ticker === cryptoStart)
+                this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(_('Crypto')));
             if (expanded) {
                 const row = new PopupMenu.PopupMenuItem('', {reactive: false, can_focus: false});
                 row.label.clutter_text.set_markup(this._rowMarkup(ticker));
