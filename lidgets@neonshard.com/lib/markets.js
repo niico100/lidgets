@@ -342,11 +342,16 @@ class MarketsIndicator extends PanelMenu.Button {
     }
 
     _buildRangeRow() {
-        const buttonRow = new St.BoxLayout({style_class: 'lidgets-graph-ranges'});
+        // Buttons share the full width so they span the graphs below.
+        const buttonRow = new St.BoxLayout({
+            style_class: 'lidgets-graph-ranges',
+            x_expand: true,
+        });
         for (const range of GRAPH_RANGES) {
             const button = new St.Button({
                 label: range.label,
                 style_class: 'lidgets-graph-range',
+                x_expand: true,
                 can_focus: true,
                 checked: range.id === this._range,
             });
