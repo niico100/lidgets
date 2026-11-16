@@ -467,7 +467,8 @@ class MarketsIndicator extends PanelMenu.Button {
     _paintGraph(area, symbol) {
         const cr = area.get_context();
         try {
-            const points = this._history.get(this._historyKey(symbol, this._range))?.data?.points;
+            const data = this._history.get(this._historyKey(symbol, this._range))?.data;
+            const points = data?.points;
             if (!points)
                 return;
             const [width, height] = area.get_surface_size();
@@ -491,9 +492,32 @@ class MarketsIndicator extends PanelMenu.Button {
             const labelHeight = layout.get_pixel_size()[1];
             const bottom = height - labelHeight - 2;
 
+            // Price labels for the high, middle and low, in a right gutter.
+            const levels = [max, (max + min) / 2, min].map(value => {
+                layout.set_text(formatPrice(value, data.currency, max >= 100), -1);
+                return {value, text: layout.get_text(), width: layout.get_pixel_size()[0]};
+            });
+            const right = width - Math.max(...levels.map(l => l.width)) - 6;
+
             // Spread by index, not time, so nights and weekends leave no gaps.
-            const x = i => pad + i / (values.length - 1) * (width - 2 * pad);
+            const x = i => pad + i / (values.length - 1) * (right - 2 * pad);
             const y = v => pad + (max - v) / span * (bottom - 2 * pad);
+            const fg = node.get_foreground_color();
+            const ink = alpha => cr.setSourceRGBA(fg.red / 255, fg.green / 255, fg.blue / 255, alpha);
+
+            // Faint gridlines at each labelled price, the label beside them.
+            for (const level of levels) {
+                const ly = Math.round(y(level.value)) + 0.5;
+                ink(0.12);
+                cr.setLineWidth(1);
+                cr.moveTo(pad, ly);
+                cr.lineTo(right - pad, ly);
+                cr.stroke();
+                layout.set_text(level.text, -1);
+                ink(0.6);
+                cr.moveTo(right, Math.min(Math.max(ly - labelHeight / 2, 0), bottom - labelHeight));
+                PangoCairo.show_layout(cr, layout);
+            }
 
             const [r, g, b] = values.at(-1) >= values[0]
                 ? [0.34, 0.80, 0.45] : [0.93, 0.36, 0.36];
@@ -503,7 +527,7 @@ class MarketsIndicator extends PanelMenu.Button {
             cr.setLineWidth(1);
             cr.setDash([3, 3], 0);
             cr.moveTo(pad, y(values[0]));
-            cr.lineTo(width - pad, y(values[0]));
+            cr.lineTo(right - pad, y(values[0]));
             cr.stroke();
             cr.setDash([], 0);
 
@@ -519,18 +543,17 @@ class MarketsIndicator extends PanelMenu.Button {
             cr.setSourceRGBA(r, g, b, 0.15);
             cr.fill();
 
-            const fg = node.get_foreground_color();
             for (const {index, text} of axisTicks(points, this._range)) {
                 layout.set_text(text, -1);
                 const [textWidth] = layout.get_pixel_size();
                 const tx = x(index);
-                cr.setSourceRGBA(fg.red / 255, fg.green / 255, fg.blue / 255, 0.35);
+                ink(0.35);
                 cr.setLineWidth(1);
                 cr.moveTo(Math.round(tx) + 0.5, bottom - pad);
                 cr.lineTo(Math.round(tx) + 0.5, bottom - pad + 3);
                 cr.stroke();
-                cr.setSourceRGBA(fg.red / 255, fg.green / 255, fg.blue / 255, 0.6);
-                cr.moveTo(Math.min(Math.max(tx - textWidth / 2, 0), width - textWidth), bottom);
+                ink(0.6);
+                cr.moveTo(Math.min(Math.max(tx - textWidth / 2, 0), right - textWidth), bottom);
                 PangoCairo.show_layout(cr, layout);
             }
         } finally {
