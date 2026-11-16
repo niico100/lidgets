@@ -118,8 +118,9 @@ function percentChange(from, to) {
 }
 
 /*
- * Returns {symbol, currency, price, time, changes: {'24h', '7d', '1m', '6m'}}
- * with each change a percentage or null, or null if the reply is unusable.
+ * Returns {symbol, currency, price, time, changes: {'24h', '7d', '1m', '6m'},
+ * marketHours: {start, end} or null for crypto} with each change a
+ * percentage or null, or null if the reply is unusable.
  */
 export function parseChart(data) {
     const result = data?.chart?.result?.[0];
@@ -165,7 +166,19 @@ export function parseChart(data) {
         price /= divisor;
     }
 
-    return {symbol: meta.symbol ?? '', currency, price, time, changes};
+    // Today's regular session, or the last one when the market is shut.
+    const session = meta.currentTradingPeriod?.regular;
+    const marketHours = meta.instrumentType === 'CRYPTOCURRENCY' ? null
+        : Number.isFinite(session?.start) && Number.isFinite(session?.end)
+            ? {start: session.start, end: session.end} : null;
+
+    return {symbol: meta.symbol ?? '', currency, price, time, changes, marketHours};
+}
+
+// False only when the quote's market is outside its regular session.
+export function isMarketOpen(quote, nowSeconds = Date.now() / 1000) {
+    const hours = quote?.marketHours;
+    return !hours || (nowSeconds >= hours.start && nowSeconds < hours.end);
 }
 
 // "BTC-USD" reads as "BTC" in the panel; stock symbols stay as they are.

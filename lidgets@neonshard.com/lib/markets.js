@@ -20,7 +20,7 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 import {makeJsonFetcher, watchNetworkRecovery} from './geocode.js';
 import {
     GRAPH_RANGES, PERIODS, USER_AGENT, chartUrl, formatChange, formatPrice,
-    historyUrl, parseChart, parseHistory, shortSymbol,
+    historyUrl, isMarketOpen, parseChart, parseHistory, shortSymbol,
 } from './quotes.js';
 
 const HTTP_TIMEOUT_SECONDS = 15;
@@ -199,7 +199,10 @@ class MarketsIndicator extends PanelMenu.Button {
             .map(p => `${p.label} ${this._changeMarkup(quote.changes[p.id])}`)
             .join('  ');
         const stale = this._failed.has(ticker.symbol) ? ' *' : '';
-        return `<b>${name}</b>  ${esc(formatPrice(quote.price, quote.currency))}${stale}    ${periods}`;
+        const state = isMarketOpen(quote)
+            ? `<span foreground="${CHANGE_UP}">o</span>`
+            : `<span foreground="${CHANGE_DOWN}">c</span>`;
+        return `${state} <b>${name}</b>  ${esc(formatPrice(quote.price, quote.currency))}${stale}    ${periods}`;
     }
 
     _render() {
