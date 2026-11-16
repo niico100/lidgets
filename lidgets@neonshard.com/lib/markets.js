@@ -4,7 +4,7 @@
  * Tickers live in GSettings with a per-ticker choice of whether the price is
  * shown in the panel or only in the dropdown. The panel shows the 24-hour
  * change; the dropdown adds 7-day, 1-month and 6-month changes. Clicking a
- * ticker in the dropdown unfolds a price graph with 1d/1w/1m/1y/5y ranges.
+ * ticker in the dropdown unfolds a price graph with 1d/1w/1m/1y/5y/max ranges.
  */
 
 import GObject from 'gi://GObject';

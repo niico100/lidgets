@@ -52,6 +52,7 @@ export const GRAPH_RANGES = [
     {id: '1m', label: '1m', range: '1mo', interval: '1h'},
     {id: '1y', label: '1y', range: '1y', interval: '1d'},
     {id: '5y', label: '5y', range: '5y', interval: '1wk'},
+    {id: 'max', label: 'max', range: 'max', interval: '1mo'},
 ];
 
 export function historyUrl(symbol, rangeId) {
