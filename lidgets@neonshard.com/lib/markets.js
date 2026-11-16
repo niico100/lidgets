@@ -196,14 +196,16 @@ class MarketsIndicator extends PanelMenu.Button {
                 ? `${name}  ${esc(_('unavailable'))}` : `${name}  …`;
         }
         const stale = this._failed.has(ticker.symbol) ? ' *' : '';
-        const price = `<b>${name}</b>  ${esc(formatPrice(quote.price, quote.currency))}${stale}`;
+        let markup = `<b>${name}</b>  ${esc(formatPrice(quote.price, quote.currency))}${stale}`;
+        // Crypto never closes, so only stocks say whether they are open.
+        if (!isCrypto(ticker.symbol))
+            markup += `    ${this._statusMarkup(quote)}`;
         if (!this._settings.get_boolean('market-graphs-expanded')) {
-            const periods = [{id: '24h', label: '24h'}, ...PERIODS]
+            markup += '    ' + [{id: '24h', label: '24h'}, ...PERIODS]
                 .map(p => `${p.label} ${this._changeMarkup(quote.changes[p.id])}`)
                 .join('  ');
-            return `${price}    ${periods}    ${this._statusMarkup(quote)}`;
         }
-        return `${price}    ${this._statusMarkup(quote)}`;
+        return markup;
     }
 
     // "NYSE Open (Closes 3hr)" with the state in green or "Closed (Opens 1hr)" in red.
@@ -258,11 +260,6 @@ class MarketsIndicator extends PanelMenu.Button {
         this._rangeButtons = new Map();
         this._updatedLabel = null;
 
-        const heading = new PopupMenu.PopupMenuItem(
-            _('Stocks and crypto'), {reactive: false, can_focus: false});
-        heading.label.style = 'font-weight: bold;';
-        this.menu.addMenuItem(heading);
-
         if (tickers.length === 0) {
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
                 _('Add tickers in Preferences → Markets'),
@@ -276,16 +273,15 @@ class MarketsIndicator extends PanelMenu.Button {
             this.menu.addMenuItem(item);
         }
 
-        // Stocks first, then crypto under its own labelled divider.
+        // Stocks first, then crypto, each under its own labelled divider.
+        const stocks = tickers.filter(t => !isCrypto(t.symbol));
         const crypto = tickers.filter(t => isCrypto(t.symbol));
-        const ordered = [...tickers.filter(t => !isCrypto(t.symbol)), ...crypto];
-        const cryptoStart = crypto.length > 0 && crypto.length < tickers.length
-            ? crypto[0] : null;
+        const dividers = new Map([[stocks[0], _('Stocks')], [crypto[0], _('Crypto')]]);
 
         let reopen = null;
-        for (const ticker of ordered) {
-            if (ticker === cryptoStart)
-                this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(_('Crypto')));
+        for (const ticker of [...stocks, ...crypto]) {
+            if (dividers.has(ticker))
+                this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(dividers.get(ticker)));
             if (expanded) {
                 const row = new PopupMenu.PopupMenuItem('', {reactive: false, can_focus: false});
                 row.label.clutter_text.set_markup(this._rowMarkup(ticker));
