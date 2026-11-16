@@ -185,8 +185,8 @@ class MarketsIndicator extends PanelMenu.Button {
     }
 
     // Whole-percent change, green when up and red when down, as Pango markup.
-    _changeMarkup(percent) {
-        const text = formatChange(percent, 0);
+    _changeMarkup(percent, digits = 0) {
+        const text = formatChange(percent, digits);
         const color = text.startsWith('+') ? CHANGE_UP : text.startsWith('−') ? CHANGE_DOWN : null;
         return color ? `<span foreground="${color}">${text}</span>` : text;
     }
@@ -201,6 +201,13 @@ class MarketsIndicator extends PanelMenu.Button {
         }
         const stale = this._failed.has(ticker.symbol) ? ' *' : '';
         let markup = `<b>${name}</b>  ${esc(formatPrice(quote.price, quote.currency))}${stale}`;
+        // Expanded graphs: the change across the range they show.
+        const values = this._settings.get_boolean('market-graphs-expanded')
+            ? this._history.get(this._historyKey(ticker.symbol, this._range))?.data?.points
+                ?.map(p => p[1])
+            : null;
+        if (values?.length > 1)
+            markup += `  ${this._changeMarkup((values.at(-1) - values[0]) / values[0] * 100, 1)}`;
         // Crypto never closes, so only stocks say whether they are open.
         if (!isCrypto(ticker.symbol))
             markup += `    ${this._statusMarkup(quote)}`;
@@ -446,6 +453,8 @@ class MarketsIndicator extends PanelMenu.Button {
     }
 
     _updateGraph(graph) {
+        this._rows.get(graph.symbol)?.label.clutter_text.set_markup(
+            this._rowMarkup({symbol: graph.symbol}));
         const entry = this._history.get(this._historyKey(graph.symbol, this._range));
         const points = entry?.data?.points;
         if (!graph.summary) {
