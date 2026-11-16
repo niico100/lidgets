@@ -170,15 +170,39 @@ export function parseChart(data) {
     const session = meta.currentTradingPeriod?.regular;
     const marketHours = meta.instrumentType === 'CRYPTOCURRENCY' ? null
         : Number.isFinite(session?.start) && Number.isFinite(session?.end)
-            ? {start: session.start, end: session.end} : null;
+            ? {start: session.start, end: session.end, offset: Number(session.gmtoffset) || 0}
+            : null;
 
     return {symbol: meta.symbol ?? '', currency, price, time, changes, marketHours};
 }
 
-// False only when the quote's market is outside its regular session.
-export function isMarketOpen(quote, nowSeconds = Date.now() / 1000) {
+/*
+ * {open, seconds} where seconds counts down to the next close or open, or is
+ * null for markets that never close. Past today's close, the next open is
+ * assumed to be the same time on the next weekday; holidays are not known.
+ */
+export function marketStatus(quote, nowSeconds = Date.now() / 1000) {
     const hours = quote?.marketHours;
-    return !hours || (nowSeconds >= hours.start && nowSeconds < hours.end);
+    if (!hours)
+        return {open: true, seconds: null};
+    if (nowSeconds < hours.start)
+        return {open: false, seconds: hours.start - nowSeconds};
+    if (nowSeconds < hours.end)
+        return {open: true, seconds: hours.end - nowSeconds};
+    let next = hours.start + DAY_SECONDS;
+    const weekday = t => new Date((t + hours.offset) * 1000).getUTCDay();
+    while (next <= nowSeconds || weekday(next) === 0 || weekday(next) === 6)
+        next += DAY_SECONDS;
+    return {open: false, seconds: next - nowSeconds};
+}
+
+// "45min", "3hr", "2d".
+export function formatDuration(seconds) {
+    const minutes = Math.max(1, Math.round(seconds / 60));
+    if (minutes < 60)
+        return `${minutes}min`;
+    const hours = Math.round(minutes / 60);
+    return hours < 24 ? `${hours}hr` : `${Math.round(hours / 24)}d`;
 }
 
 // "BTC-USD" reads as "BTC" in the panel; stock symbols stay as they are.

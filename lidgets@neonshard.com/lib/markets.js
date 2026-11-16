@@ -20,7 +20,7 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 import {makeJsonFetcher, watchNetworkRecovery} from './geocode.js';
 import {
     GRAPH_RANGES, PERIODS, USER_AGENT, chartUrl, formatChange, formatPrice,
-    historyUrl, isMarketOpen, parseChart, parseHistory, shortSymbol,
+    formatDuration, historyUrl, marketStatus, parseChart, parseHistory, shortSymbol,
 } from './quotes.js';
 
 const HTTP_TIMEOUT_SECONDS = 15;
@@ -195,14 +195,29 @@ class MarketsIndicator extends PanelMenu.Button {
             return this._failed.has(ticker.symbol)
                 ? `${name}  ${esc(_('unavailable'))}` : `${name}  …`;
         }
-        const periods = [{id: '24h', label: '24h'}, ...PERIODS]
-            .map(p => `${p.label} ${this._changeMarkup(quote.changes[p.id])}`)
-            .join('  ');
         const stale = this._failed.has(ticker.symbol) ? ' *' : '';
-        const state = isMarketOpen(quote)
-            ? `<span foreground="${CHANGE_UP}">o</span>`
-            : `<span foreground="${CHANGE_DOWN}">c</span>`;
-        return `${state} <b>${name}</b>  ${esc(formatPrice(quote.price, quote.currency))}${stale}    ${periods}`;
+        const price = `<b>${name}</b>  ${esc(formatPrice(quote.price, quote.currency))}${stale}`;
+        if (!this._settings.get_boolean('market-graphs-expanded')) {
+            const periods = [{id: '24h', label: '24h'}, ...PERIODS]
+                .map(p => `${p.label} ${this._changeMarkup(quote.changes[p.id])}`)
+                .join('  ');
+            return `${price}    ${periods}    ${this._statusMarkup(quote)}`;
+        }
+        return `${price}    ${this._statusMarkup(quote)}`;
+    }
+
+    // "Open (Closes 3hr)" in green or "Closed (Opens 1hr)" in red.
+    _statusMarkup(quote) {
+        const {open, seconds} = marketStatus(quote);
+        const word = open ? _('Open') : _('Closed');
+        const color = open ? CHANGE_UP : CHANGE_DOWN;
+        let detail = '';
+        if (seconds !== null) {
+            const time = formatDuration(seconds);
+            detail = open ? _('Closes %s').format(time) : _('Opens %s').format(time);
+            detail = ` (${GLib.markup_escape_text(detail, -1)})`;
+        }
+        return `<span foreground="${color}">${GLib.markup_escape_text(word, -1)}</span>${detail}`;
     }
 
     _render() {
