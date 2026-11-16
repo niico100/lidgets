@@ -18,6 +18,11 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 
 import {Sensors} from './sensors.js';
 
+// GPU readings under each device's name, in this order.
+const GPU_ORDER = ['gpu', 'vram', 'gpu-temp', 'gpu-freq'];
+const N_ = text => text;
+const GPU_LABELS = {gpu: N_('Load'), vram: N_('RAM'), 'gpu-temp': N_('Temp'), 'gpu-freq': N_('Clock')};
+
 export const MetricsIndicator = GObject.registerClass(
 class MetricsIndicator extends PanelMenu.Button {
     _init(settings, extensionPath) {
@@ -28,6 +33,7 @@ class MetricsIndicator extends PanelMenu.Button {
         this._available = this._sensors.available();
         this._tickId = 0;
         this._detailLabels = new Map();
+        this._gpuItems = new Map();
         this._panelLabels = new Map();
         this._iconPath = GLib.build_filenamev([extensionPath, 'icons']);
 
@@ -138,6 +144,7 @@ class MetricsIndicator extends PanelMenu.Button {
     _buildMenu() {
         this.menu.removeAll();
         this._detailLabels.clear();
+        this._gpuItems = new Map();
 
         if (this._available.length === 0) {
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
@@ -145,30 +152,56 @@ class MetricsIndicator extends PanelMenu.Button {
             return;
         }
 
-        for (const def of this._available) {
-            const item = new PopupMenu.PopupBaseMenuItem({
-                reactive: false,
-                can_focus: false,
-            });
+        for (const def of this._available.filter(d => !d.gpuId))
+            this._addDetailRow(_(def.title), def.id);
 
-            const row = new St.BoxLayout({x_expand: true});
-            row.add_child(new St.Label({
-                text: def.gpuName ? `${_(def.title)}: ${def.gpuName}` : _(def.title),
-                x_expand: true,
-                y_align: Clutter.ActorAlign.CENTER,
-            }));
-
-            const value = new St.Label({
-                text: '--',
-                y_align: Clutter.ActorAlign.CENTER,
-                style: 'font-weight: bold; padding-left: 24px;',
-            });
-            row.add_child(value);
-
-            item.add_child(row);
-            this.menu.addMenuItem(item);
-            this._detailLabels.set(def.id, value);
+        // One block per GPU: its full name, then each reading on its own row.
+        const gpus = new Map();
+        for (const def of this._available.filter(d => d.gpuId)) {
+            if (!gpus.has(def.gpuId))
+                gpus.set(def.gpuId, []);
+            gpus.get(def.gpuId).push(def);
         }
+        if (gpus.size > 0)
+            this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(_('GPUs')));
+        for (const [gpuId, defs] of gpus) {
+            const heading = new PopupMenu.PopupMenuItem(defs[0].gpuName,
+                {reactive: false, can_focus: false});
+            heading.label.style = 'font-weight: bold;';
+            this.menu.addMenuItem(heading);
+            const items = [heading];
+            defs.sort((a, b) => GPU_ORDER.indexOf(a.type) - GPU_ORDER.indexOf(b.type));
+            for (const def of defs)
+                items.push(this._addDetailRow(_(GPU_LABELS[def.type] ?? def.title), def.id, true));
+            this._gpuItems.set(gpuId, {items, ids: defs.map(d => d.id)});
+        }
+    }
+
+    _addDetailRow(text, id, indent = false) {
+        const item = new PopupMenu.PopupBaseMenuItem({
+            reactive: false,
+            can_focus: false,
+        });
+
+        const row = new St.BoxLayout({x_expand: true});
+        row.add_child(new St.Label({
+            text,
+            x_expand: true,
+            y_align: Clutter.ActorAlign.CENTER,
+            style: indent ? 'padding-left: 12px;' : null,
+        }));
+
+        const value = new St.Label({
+            text: '--',
+            y_align: Clutter.ActorAlign.CENTER,
+            style: 'font-weight: bold; padding-left: 24px;',
+        });
+        row.add_child(value);
+
+        item.add_child(row);
+        this.menu.addMenuItem(item);
+        this._detailLabels.set(id, value);
+        return item;
     }
 
     _tick() {
@@ -212,6 +245,13 @@ class MetricsIndicator extends PanelMenu.Button {
         for (const [id, label] of this._detailLabels) {
             if (readings[id])
                 label.text = readings[id].disconnected ? _('Disconnected') : readings[id].detail;
+        }
+
+        // Only GPUs that are plugged in get a block.
+        for (const {items, ids} of this._gpuItems?.values() ?? []) {
+            const present = ids.some(id => readings[id] && !readings[id].disconnected);
+            for (const item of items)
+                item.visible = present;
         }
     }
 
