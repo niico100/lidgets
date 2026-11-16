@@ -30,6 +30,15 @@ const QUOTE_TYPES = new Set(['EQUITY', 'ETF', 'CRYPTOCURRENCY', 'INDEX', 'MUTUAL
  */
 const MINOR_UNITS = {GBp: ['GBP', 100], GBX: ['GBP', 100], ZAc: ['ZAR', 100], ILA: ['ILS', 100]};
 
+// Yahoo exchange codes as people know them; others use Yahoo's full name.
+const EXCHANGES = {
+    NMS: 'Nasdaq', NGM: 'Nasdaq', NCM: 'Nasdaq', NAS: 'Nasdaq', NYQ: 'NYSE',
+    ASE: 'NYSE American', PCX: 'NYSE Arca', BTS: 'Cboe', LSE: 'LSE', IOB: 'LSE',
+    GER: 'Xetra', FRA: 'Frankfurt', PAR: 'Euronext Paris', AMS: 'Euronext Amsterdam',
+    MIL: 'Borsa Italiana', MCE: 'BME', EBS: 'SIX', PRA: 'Prague', TOR: 'TSX',
+    JPX: 'Tokyo', HKG: 'HKEX', ASX: 'ASX',
+};
+
 export const PERIODS = [
     {id: '7d', label: '7d'},
     {id: '1m', label: '1m'},
@@ -119,7 +128,7 @@ function percentChange(from, to) {
 
 /*
  * Returns {symbol, currency, price, time, changes: {'24h', '7d', '1m', '6m'},
- * marketHours: {start, end} or null for crypto} with each change a
+ * marketHours: {start, end, offset} or null for crypto, exchange} with each change a
  * percentage or null, or null if the reply is unusable.
  */
 export function parseChart(data) {
@@ -173,7 +182,11 @@ export function parseChart(data) {
             ? {start: session.start, end: session.end, offset: Number(session.gmtoffset) || 0}
             : null;
 
-    return {symbol: meta.symbol ?? '', currency, price, time, changes, marketHours};
+    const exchange = !marketHours ? ''
+        : EXCHANGES[meta.exchangeName] ?? (typeof meta.fullExchangeName === 'string'
+            ? meta.fullExchangeName : '');
+
+    return {symbol: meta.symbol ?? '', currency, price, time, changes, marketHours, exchange};
 }
 
 /*
