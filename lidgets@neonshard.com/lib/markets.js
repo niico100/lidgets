@@ -28,6 +28,9 @@ const REFRESH_SECONDS = 5 * 60;
 // Readable on the dark shell popup.
 const CHANGE_UP = '#57e389';
 const CHANGE_DOWN = '#f66151';
+// Bitcoin orange for crypto, a finance blue for stocks.
+const CRYPTO_COLOR = '#f7931a';
+const STOCKS_COLOR = '#62a0ea';
 const PANEL_SEPARATOR = '  ·  ';
 // Shown whenever no price or change is in the panel; names alone say nothing.
 const ICON_FILE = Gio.File.new_for_uri(import.meta.url).get_parent().get_parent()
@@ -223,6 +226,14 @@ class MarketsIndicator extends PanelMenu.Button {
         return `${exchange}<span foreground="${color}">${GLib.markup_escape_text(word, -1)}</span>${detail}`;
     }
 
+    // A labelled separator with its text and line in one color.
+    _divider(text, color) {
+        const item = new PopupMenu.PopupSeparatorMenuItem(text);
+        item.label.style = `color: ${color}; font-weight: bold;`;
+        item._separator.style = `background-color: ${color};`;
+        return item;
+    }
+
     _render() {
         const tickers = this._tickers();
         const inPanel = tickers.filter(t => t.inPanel);
@@ -276,12 +287,15 @@ class MarketsIndicator extends PanelMenu.Button {
         // Stocks first, then crypto, each under its own labelled divider.
         const stocks = tickers.filter(t => !isCrypto(t.symbol));
         const crypto = tickers.filter(t => isCrypto(t.symbol));
-        const dividers = new Map([[stocks[0], _('Stocks')], [crypto[0], _('Crypto')]]);
+        const dividers = new Map([
+            [stocks[0], [_('Stocks'), STOCKS_COLOR]],
+            [crypto[0], [_('Crypto'), CRYPTO_COLOR]],
+        ]);
 
         let reopen = null;
         for (const ticker of [...stocks, ...crypto]) {
             if (dividers.has(ticker))
-                this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(dividers.get(ticker)));
+                this.menu.addMenuItem(this._divider(...dividers.get(ticker)));
             if (expanded) {
                 const row = new PopupMenu.PopupMenuItem('', {reactive: false, can_focus: false});
                 row.label.clutter_text.set_markup(this._rowMarkup(ticker));
