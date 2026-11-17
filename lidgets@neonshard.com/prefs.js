@@ -20,6 +20,7 @@ import {
     clockLabel, makeClockEntry, timezoneFlag, timezoneLocality,
 } from './lib/timezones.js';
 import {USER_AGENT, searchSymbols, shortSymbol} from './lib/quotes.js';
+import {CURRENCIES, MAX_CURRENCY_PAIRS} from './lib/currencies.js';
 
 /*
  * Long enough that ordinary typing produces one request rather than one per
@@ -144,6 +145,7 @@ export default class LidgetsPreferences extends ExtensionPreferences {
         window.add(this._generalPage(settings));
         window.add(this._clocksPage(settings));
         window.add(this._weatherPage(settings));
+        window.add(this._currencyPage(settings));
         window.add(this._marketsPage(settings));
         window.add(this._metricsPage(settings));
     }
@@ -179,7 +181,7 @@ export default class LidgetsPreferences extends ExtensionPreferences {
             ['clocks-enabled', _('World clocks'), _('Times for the zones you follow')],
             ['weather-enabled', _('Weather'), _('Current conditions and an 8-hour forecast')],
             ['currency-enabled', _('Currency converter'),
-                _('Live reference-rate conversion; configure it from the panel popup')],
+                _('Live reference-rate conversion; save pairs on the Currency page')],
             ['markets-enabled', _('Stocks and crypto'),
                 _('Prices with 24-hour change; choose tickers on the Markets page')],
             ['metrics-enabled', _('System metrics'), _('CPU, GPU, memory, disk and more')],
@@ -519,6 +521,127 @@ export default class LidgetsPreferences extends ExtensionPreferences {
             save();
             rebuild();
             // Open the new row so the clock is ready to edit.
+            rows[rows.length - 1].expanded = true;
+        });
+
+        rebuild();
+        return page;
+    }
+
+    /* --------------------------------------------------------------- currency */
+
+    _currencyPage(settings) {
+        const page = new Adw.PreferencesPage({
+            title: _('Currency'),
+            icon_name: 'accessories-calculator-symbolic',
+        });
+
+        const options = new Adw.PreferencesGroup({title: _('Display')});
+        page.add(options);
+        const enabled = new Adw.SwitchRow({title: _('Show currency converter')});
+        settings.bind('currency-enabled', enabled, 'active', Gio.SettingsBindFlags.DEFAULT);
+        options.add(enabled);
+
+        const list = new Adw.PreferencesGroup({
+            title: _('Saved pairs'),
+            description: _('Each pair is listed with its converted value in the currency popup, for example £1 to CZK or $100 to GBP. Click one there to load it into the converter.'),
+        });
+        page.add(list);
+        settings.bind('currency-enabled', list, 'sensitive',
+            Gio.SettingsBindFlags.GET | Gio.SettingsBindFlags.NO_SENSITIVITY);
+
+        const addButton = makeFlatButton('list-add-symbolic', _('Add a pair'));
+        list.set_header_suffix(addButton);
+
+        const pairs = settings.get_value('currency-pairs').deepUnpack()
+            .filter(([, from, to]) => CURRENCIES.includes(from) && CURRENCIES.includes(to));
+        const save = () => settings.set_value(
+            'currency-pairs', new GLib.Variant('a(dss)', pairs));
+        const pairTitle = ([amount, from, to]) => `${amount} ${from} → ${to}`;
+
+        const makeCurrencyRow = (title, value, onChanged) => {
+            const row = new Adw.ComboRow({
+                title,
+                model: Gtk.StringList.new(CURRENCIES),
+                enable_search: true,
+            });
+            row.expression = Gtk.PropertyExpression.new(Gtk.StringObject, null, 'string');
+            row.selected = Math.max(0, CURRENCIES.indexOf(value));
+            row.connect('notify::selected', () => onChanged(CURRENCIES[row.selected]));
+            return row;
+        };
+
+        // Rebuilt only on add and remove, so editing keeps focus.
+        let rows = [];
+        const rebuild = () => {
+            for (const row of rows)
+                list.remove(row);
+            rows = [];
+            addButton.sensitive = pairs.length < MAX_CURRENCY_PAIRS;
+            list.title = `${_('Saved pairs')}  (${pairs.length}/${MAX_CURRENCY_PAIRS})`;
+
+            if (pairs.length === 0) {
+                const empty = new Adw.ActionRow({
+                    title: _('No saved pairs'),
+                    subtitle: _('Use + to add one'),
+                });
+                list.add(empty);
+                rows.push(empty);
+                return;
+            }
+
+            pairs.forEach((pair, index) => {
+                const row = new Adw.ExpanderRow({title: pairTitle(pair)});
+                const remove = makeFlatButton('user-trash-symbolic', _('Remove this pair'));
+                remove.connect('clicked', () => {
+                    pairs.splice(index, 1);
+                    save();
+                    rebuild();
+                });
+                row.add_suffix(remove);
+
+                const update = () => {
+                    row.title = pairTitle(pairs[index]);
+                    save();
+                };
+                const amount = new Adw.SpinRow({
+                    title: _('Amount'),
+                    digits: 2,
+                    adjustment: new Gtk.Adjustment({
+                        lower: 0.01,
+                        upper: 1_000_000_000,
+                        step_increment: 1,
+                        page_increment: 100,
+                        value: pair[0],
+                    }),
+                });
+                amount.connect('notify::value', () => {
+                    pairs[index][0] = amount.value;
+                    update();
+                });
+                row.add_row(amount);
+                row.add_row(makeCurrencyRow(_('From'), pair[1], code => {
+                    pairs[index][1] = code;
+                    update();
+                }));
+                row.add_row(makeCurrencyRow(_('To'), pair[2], code => {
+                    pairs[index][2] = code;
+                    update();
+                }));
+
+                list.add(row);
+                rows.push(row);
+            });
+        };
+
+        addButton.connect('clicked', () => {
+            if (pairs.length >= MAX_CURRENCY_PAIRS)
+                return;
+            pairs.push([1, settings.get_string('currency-from'),
+                settings.get_string('currency-to')].map((v, i) =>
+                i > 0 && !CURRENCIES.includes(v) ? (i === 1 ? 'EUR' : 'USD') : v));
+            save();
+            rebuild();
             rows[rows.length - 1].expanded = true;
         });
 

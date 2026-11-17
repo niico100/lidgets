@@ -17,6 +17,7 @@ import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {makeJsonFetcher, watchNetworkRecovery} from './geocode.js';
+import {CURRENCIES, MAX_CURRENCY_PAIRS} from './currencies.js';
 
 const API_ROOT = 'https://api.frankfurter.dev/v2/rate';
 const HTTP_TIMEOUT_SECONDS = 15;
@@ -26,12 +27,6 @@ const CURRENCY_SYMBOLS = '$ £ € ¥';
 const MIN_AMOUNT = 0.000001;
 const MAX_AMOUNT = 1_000_000_000_000;
 
-// A compact, useful set keeps each Shell submenu quick to scan.
-const CURRENCIES = [
-    'AUD', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HKD',
-    'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JPY', 'KRW', 'MXN', 'MYR', 'NOK',
-    'NZD', 'PHP', 'PLN', 'RON', 'SEK', 'SGD', 'THB', 'TRY', 'USD', 'ZAR',
-];
 
 function validCurrency(value, fallback) {
     return CURRENCIES.includes(value) ? value : fallback;
@@ -74,6 +69,9 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._lastLookupUs = settings.get_int64('currency-last-lookup-us');
         this._pairReloadId = 0;
         this._requestGeneration = 0;
+        // Saved pairs share rates by "FROM/TO", so duplicates cost one request.
+        this._pairRates = new Map();
+        this._pairsSection = null;
 
         this._label = new St.Label({
             text: '💱 …',
@@ -92,6 +90,10 @@ class CurrencyIndicator extends PanelMenu.Button {
             }),
             settings.connect('changed::currency-from', () => this._queuePairReload()),
             settings.connect('changed::currency-to', () => this._queuePairReload()),
+            settings.connect('changed::currency-pairs', () => {
+                this._renderPairs();
+                this._fetchPairRates(false);
+            }),
         ];
 
         this.connect('destroy', () => this._onDestroy());
@@ -102,14 +104,17 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._buildMenu();
         this._scheduleCollapse();
         this._fetchRate();
+        this._fetchPairRates(true);
         this._refreshId = GLib.timeout_add_seconds(
             GLib.PRIORITY_DEFAULT, REFRESH_SECONDS, () => {
                 this._fetchRate();
+                this._fetchPairRates(true);
                 return GLib.SOURCE_CONTINUE;
             });
         this._stopNetworkWatch = watchNetworkRecovery(() => {
             if (this._rate === null || this._failed)
                 this._fetchRate();
+            this._fetchPairRates(false);
         });
     }
 
@@ -123,6 +128,78 @@ class CurrencyIndicator extends PanelMenu.Button {
     _amount() {
         const value = this._settings.get_double('currency-amount');
         return validAmount(value) ? value : 100;
+    }
+
+    _savedPairs() {
+        return this._settings.get_value('currency-pairs').deepUnpack()
+            .filter(([amount, from, to]) => validAmount(amount) &&
+                CURRENCIES.includes(from) && CURRENCIES.includes(to))
+            .slice(0, MAX_CURRENCY_PAIRS)
+            .map(([amount, from, to]) => ({amount, from, to}));
+    }
+
+    /*
+     * With force unset, only pairs that have no rate yet or whose last
+     * request failed are fetched: enough after an edit or a reconnect.
+     */
+    _fetchPairRates(force) {
+        if (this._destroyed)
+            return;
+        const keys = new Set(this._savedPairs()
+            .filter(pair => pair.from !== pair.to)
+            .map(pair => `${pair.from}/${pair.to}`));
+        for (const key of keys) {
+            const known = this._pairRates.get(key);
+            if (!force && known && !known.failed)
+                continue;
+            const [from, to] = key.split('/');
+            const url = `${API_ROOT}/${from.toLowerCase()}/${to.toLowerCase()}`;
+            this._fetchJson(url, data => {
+                if (this._destroyed)
+                    return;
+                const rate = Number(data?.rate);
+                const previous = this._pairRates.get(key);
+                if (Number.isFinite(rate) && rate > 0 &&
+                    data?.base === from && data?.quote === to)
+                    this._pairRates.set(key, {rate, failed: false});
+                else
+                    this._pairRates.set(key, {rate: previous?.rate ?? null, failed: true});
+                this._renderPairs();
+            });
+        }
+    }
+
+    _loadPair(pair) {
+        this._settings.set_string('currency-from', pair.from);
+        this._settings.set_string('currency-to', pair.to);
+        this._settings.set_double('currency-amount', pair.amount);
+        this._amountEntry?.set_text(String(pair.amount));
+    }
+
+    _renderPairs() {
+        if (!this._pairsSection)
+            return;
+        this._pairsSection.removeAll();
+        const pairs = this._savedPairs();
+        if (pairs.length === 0)
+            return;
+
+        this._pairsSection.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(_('Saved pairs')));
+        for (const pair of pairs) {
+            const known = pair.from === pair.to
+                ? {rate: 1, failed: false}
+                : this._pairRates.get(`${pair.from}/${pair.to}`);
+            let result;
+            if (known?.rate)
+                result = formatCurrency(pair.amount * known.rate, pair.to) +
+                    (known.failed ? '*' : '');
+            else
+                result = known?.failed ? '⚠' : '…';
+            const item = this._pairsSection.addAction(
+                `${formatCurrency(pair.amount, pair.from)} = ${result}`,
+                () => this._loadPair(pair));
+            item.accessible_name = _('Load this pair into the converter');
+        }
     }
 
     _queuePairReload() {
@@ -278,6 +355,11 @@ class CurrencyIndicator extends PanelMenu.Button {
         this._dateItem.label.opacity = 160;
         this.menu.addMenuItem(this._dateItem);
 
+        this._pairsSection = new PopupMenu.PopupMenuSection();
+        this.menu.addMenuItem(this._pairsSection);
+        this._renderPairs();
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem());
+
         this.menu.addAction(_('Swap currencies'), () => {
             const pair = this._pair();
             this._settings.set_string('currency-from', pair.to);
@@ -286,6 +368,7 @@ class CurrencyIndicator extends PanelMenu.Button {
         this.menu.addAction(_('Refresh rate'), () => {
             this._markConversionFresh();
             this._fetchRate();
+            this._fetchPairRates(true);
         });
         this._render();
     }
