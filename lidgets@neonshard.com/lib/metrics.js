@@ -165,6 +165,7 @@ class MetricsIndicator extends PanelMenu.Button {
         this.menu.removeAll();
         this._detailLabels.clear();
         this._gpuItems = new Map();
+        this._topRows = {cpu: this._addTopSection(_('Top CPU')), ram: this._addTopSection(_('Top RAM'))};
 
         if (this._available.length === 0) {
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
@@ -172,6 +173,8 @@ class MetricsIndicator extends PanelMenu.Button {
             return;
         }
 
+        // A divider so these rows do not read as more top apps.
+        this.menu.addMenuItem(new PopupMenu.PopupSeparatorMenuItem(_('System')));
         for (const def of this._available.filter(d => !d.gpuId))
             this._addDetailRow(_(def.title), def.id);
 
@@ -195,8 +198,6 @@ class MetricsIndicator extends PanelMenu.Button {
                 items.push(this._addDetailRow(_(GPU_LABELS[def.type] ?? def.title), def.id, true));
             this._gpuItems.set(gpuId, {items, ids: defs.map(d => d.id)});
         }
-
-        this._topRows = {cpu: this._addTopSection(_('Top CPU')), ram: this._addTopSection(_('Top RAM'))};
     }
 
     // A divider and TOP_APPS name/value rows, filled while the menu is open.
