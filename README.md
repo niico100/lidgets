@@ -85,8 +85,8 @@ five minutes; an asterisk marks a retained price when a refresh fails.
 
 ### Codex, Claude Code and Grok Bot limits
 
-Enable either widget separately under **Preferences → General → Widgets**.
-Both are off by default and participate in the existing panel drawer. Python 3
+Enable each widget separately under **Preferences → General → Widgets**.
+All three are off by default and participate in the existing panel drawer. Python 3
 is required. Examples: `Codex (72/41)` and `Claude (72/41)` mean **allowance remaining**:
 72% for the 5-hour window and 41% for the weekly window.
 The dropdown shows reset times, the last update, and a Refresh action.
@@ -100,7 +100,7 @@ weekly window on Monday at 09:00.
   follow the account's reported durations; missing windows are not invented.
 - **Grok Bot:** reads the active account's personal weekly allowance from the
   Grok Bot desktop cache. Sign in and open **Settings > Usage & Billing** to
-  populate it. The label shows one weekly percentage, for example `Grok Bot (41)`;
+  populate it. The label uses the same 5-hour/weekly format, for example `Grok Bot (—/41)`;
   Grok Bot's cache does not report a five-hour allowance. Team and trial quotas
   are not supported. This uses the internal schema-version-3 cache format of the
   installed desktop app, which may change. No credentials are read or sent.
