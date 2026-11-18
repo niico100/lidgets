@@ -16,6 +16,7 @@ import Soup from 'gi://Soup?version=3.0';
 import PangoCairo from 'gi://PangoCairo';
 import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
+import * as Config from 'resource:///org/gnome/shell/misc/config.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {makeJsonFetcher, watchNetworkRecovery} from './geocode.js';
@@ -342,7 +343,8 @@ class MarketsIndicator extends PanelMenu.Button {
         this.menu.addAction(_('Refresh prices'), () => this._fetchAll());
 
         if (reopen)
-            reopen.menu.open(false);
+            // GNOME 51 replaced open(animation) with open({animate}).
+            reopen.menu.open(parseInt(Config.PACKAGE_VERSION) >= 51 ? {animate: false} : false);
         else
             this._expanded = null;
         if (this.menu.isOpen)
