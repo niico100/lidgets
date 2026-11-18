@@ -27,6 +27,48 @@ class UsageTests(unittest.TestCase):
         self.assertIsNone(usage.window(25, None, float('nan')))
         self.assertEqual(usage.claude_snapshot({})['windows'], [])
 
+    def test_grok_active_account_cache_and_missing_data(self):
+        import base64
+        with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'XDG_CONFIG_HOME': directory}):
+            root = Path(directory) / 'Grok Bot/sand-client-persistence'
+            root.mkdir(parents=True)
+
+            def write(key, value):
+                name = base64.b32encode(key.encode()).decode().lower().rstrip('=') + '.blob'
+                (root / name).write_text(json.dumps(value))
+
+            self.assertEqual(usage.grok_snapshot(), {'error': 'grok-setup'})
+            write('sand.client.slice.client-meta.account-slot', {'schemaVersion': 1, 'value': 'a.b/c'})
+            reading = {'usage': {'percentUsed': 28, 'nextResetMs': 2000000000000,
+                                 'hasNonZeroIncludedLimit': True, 'isSandTrial': False},
+                       'readAtMs': 1700000000000}
+            key = 'sand.client.slice.account.a%2Eb%2Fc.weekly-usage.cache'
+            cache = {'schemaVersion': 3, 'value': {'kind': 'present', 'selectedTeamId': None,
+                                                 'reading': reading}}
+            write(key, cache)
+            result = usage.grok_snapshot()
+            self.assertEqual(result['windows'], [{'remaining': 72, 'resetsAt': 2000000000, 'minutes': 10080}])
+            self.assertEqual(result['updatedAt'], 1700000000)  # Preserve cache age.
+            reading['usage']['isSandTrial'] = True
+            write(key, cache)
+            self.assertEqual(usage.grok_snapshot(), {'error': 'grok-unsupported'})
+            reading['usage']['isSandTrial'] = False
+            reading['usage']['percentUsed'] = -1
+            write(key, cache)
+            self.assertEqual(usage.grok_snapshot(), {'error': 'unavailable'})
+            reading['usage']['percentUsed'] = 110
+            write(key, cache)
+            self.assertEqual(usage.grok_snapshot()['windows'][0]['remaining'], 0)
+            cache['value']['selectedTeamId'] = 123
+            write(key, cache)
+            self.assertEqual(usage.grok_snapshot(), {'error': 'grok-unsupported'})
+            cache['schemaVersion'] = 99
+            write(key, cache)
+            self.assertEqual(usage.grok_snapshot(), {'error': 'unavailable'})
+            # Switching accounts must never fall back to a previous user's cache.
+            write('sand.client.slice.client-meta.account-slot', {'schemaVersion': 1, 'value': 'other'})
+            self.assertEqual(usage.grok_snapshot(), {'error': 'grok-setup'})
+
     def test_connection_preserves_command_and_settings(self):
         with tempfile.TemporaryDirectory() as directory, patch.dict(os.environ, {'CLAUDE_CONFIG_DIR': directory}):
             path = Path(directory) / 'settings.json'

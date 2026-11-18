@@ -1,7 +1,7 @@
 # Lidgets
 
 One configurable GNOME Shell extension for world clocks, weather, currency
-conversion, live system metrics, optional Codex and Claude Code usage limits,
+conversion, live system metrics, optional Codex, Claude Code and Grok Bot usage limits,
 a remote-desktop warning, and a panel drawer. Lidgets currently
 supports GNOME Shell 50.
 
@@ -54,6 +54,8 @@ symbols, and any ticker search typed in preferences, to Yahoo Finance.
 The optional Codex widget invokes the locally installed Codex CLI to request
 account quota data from OpenAI using its existing login. The optional Claude
 widget reads a local cache written by the Claude Code status-line connection.
+The optional Grok Bot widget reads only the active account identity and weekly
+quota cache from the installed desktop app.
 Only usage percentages, window lengths, and reset/update timestamps are cached;
 Lidgets does not read or store API keys, authentication tokens, or conversations.
 Other widgets use local system data. NVIDIA metrics optionally invoke the
@@ -81,7 +83,7 @@ dropdown lists every ticker with its 24-hour, 7-day, 1-month and 6-month
 change. Prices come from Yahoo Finance's keyless chart API and refresh every
 five minutes; an asterisk marks a retained price when a refresh fails.
 
-### Codex and Claude Code limits
+### Codex, Claude Code and Grok Bot limits
 
 Enable either widget separately under **Preferences → General → Widgets**.
 Both are off by default and participate in the existing panel drawer. Python 3
@@ -96,6 +98,13 @@ weekly window on Monday at 09:00.
   Lidgets finds `codex` on PATH or at `~/.local/bin/codex`, then reads its
   documented `account/rateLimits/read` interface every minute. Window labels
   follow the account's reported durations; missing windows are not invented.
+- **Grok Bot:** reads the active account's personal weekly allowance from the
+  Grok Bot desktop cache. Sign in and open **Settings > Usage & Billing** to
+  populate it. The label shows one weekly percentage, for example `Grok Bot (41)`;
+  Grok Bot's cache does not report a five-hour allowance. Team and trial quotas
+  are not supported. This uses the internal schema-version-3 cache format of the
+  installed desktop app, which may change. No credentials are read or sent.
+  Updates depend on Grok Bot refreshing its cache; old readings are marked stale.
 - **Claude Code:** click **Connect Claude Code**, restart Claude Code, and send
   a prompt. This wraps the command in `~/.claude/settings.json` (or
   `$CLAUDE_CONFIG_DIR/settings.json`), preserving the existing status-line

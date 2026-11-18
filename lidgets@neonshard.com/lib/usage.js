@@ -10,7 +10,7 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 const UsageIndicator = GObject.registerClass(
 class UsageIndicator extends PanelMenu.Button {
     _init(settings, path, provider) {
-        const title = provider === 'codex' ? 'Codex' : 'Claude';
+        const title = {codex: 'Codex', claude: 'Claude', grok: 'Grok Bot'}[provider];
         super._init(0.0, title, false);
         this._provider = provider;
         this._settings = settings;
@@ -71,6 +71,8 @@ class UsageIndicator extends PanelMenu.Button {
                     const [, stdout] = source.communicate_utf8_finish(result);
                     const data = JSON.parse(stdout);
                     this._error = data.error ?? null;
+                    if (this._provider === 'grok' && this._error)
+                        this._snapshot = null;
                     if (!this._error) {
                         if (!Array.isArray(data.windows) || !Number.isFinite(data.updatedAt))
                             throw new Error('Invalid usage snapshot');
@@ -115,9 +117,11 @@ class UsageIndicator extends PanelMenu.Button {
             return formatReset(w, style);
         };
         const [fiveHour, weekly] = [300, 10080].map(minutes => windows.find(w => w.minutes === minutes));
-        const values = [fiveHour, weekly].map(w => w ? remaining(w).replace('%', '') : '—');
+        const shown = this._provider === 'grok' ? [weekly] : [fiveHour, weekly];
+        const values = shown.map(w => w ? remaining(w).replace('%', '') : '—');
         const resets = this._settings.get_boolean('usage-show-resets')
-            ? ` · ${resetText(fiveHour, 'time')}/${resetText(weekly, 'day')}` : '';
+            ? ` · ${this._provider === 'grok' ? resetText(weekly, 'day') :
+                `${resetText(fiveHour, 'time')}/${resetText(weekly, 'day')}`}` : '';
         const label = `${this._title} (${values.join('/')}${resets})`;
         this._label.text = `${label}${stale ? ' *' : ''}`;
         this.menu.removeAll();
@@ -141,6 +145,12 @@ class UsageIndicator extends PanelMenu.Button {
             message = _('Install Codex CLI to read usage');
         else if (this._error === 'claude-setup')
             message = _('Connect Claude Code in Lidgets preferences, then use Claude Code');
+        else if (this._error === 'grok-setup')
+            message = _('Sign in to Grok Bot and open Settings > Usage & Billing');
+        else if (this._error === 'grok-unsupported')
+            message = _('Grok Bot team and trial allowances are not supported');
+        else if (this._error && this._provider === 'grok')
+            message = _('Grok Bot usage unavailable; its cache format may have changed');
         else if (this._error)
             message = _('Usage unavailable — check your CLI login');
         else if (!windows.length)
@@ -152,6 +162,9 @@ class UsageIndicator extends PanelMenu.Button {
         if (this._provider === 'claude')
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
                 _('Updates when Claude Code is used'), {reactive: false}));
+        if (this._provider === 'grok')
+            this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
+                _('Weekly allowance; updates from the Grok Bot desktop cache'), {reactive: false}));
         this.menu.addAction(_('Refresh'), () => this._refresh());
     }
 });
@@ -167,5 +180,12 @@ export const ClaudeIndicator = GObject.registerClass(
 class ClaudeIndicator extends UsageIndicator {
     _init(settings, path) {
         super._init(settings, path, 'claude');
+    }
+});
+
+export const GrokIndicator = GObject.registerClass(
+class GrokIndicator extends UsageIndicator {
+    _init(settings, path) {
+        super._init(settings, path, 'grok');
     }
 });

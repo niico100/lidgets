@@ -16,7 +16,7 @@ import {WeatherIndicator} from './lib/weather.js';
 import {CurrencyIndicator} from './lib/currency.js';
 import {MarketsIndicator} from './lib/markets.js';
 import {MetricsIndicator} from './lib/metrics.js';
-import {CodexIndicator, ClaudeIndicator} from './lib/usage.js';
+import {CodexIndicator, ClaudeIndicator, GrokIndicator} from './lib/usage.js';
 import {RemoteBanner} from './lib/remote.js';
 import {Drawer} from './lib/drawer.js';
 import {
@@ -37,6 +37,7 @@ const WIDGETS = [
     {key: 'metrics-enabled', role: 'lidgets-metrics', ctor: MetricsIndicator},
     {key: 'codex-enabled', role: 'lidgets-codex', ctor: CodexIndicator},
     {key: 'claude-enabled', role: 'lidgets-claude', ctor: ClaudeIndicator},
+    {key: 'grok-enabled', role: 'lidgets-grok', ctor: GrokIndicator},
 ];
 
 const LEGACY_SCHEMA = 'org.gnome.shell.extensions.panel-hub';
@@ -249,7 +250,7 @@ export default class LidgetsExtension extends Extension {
         // Built last so the indicators it collapses already exist.
         this._drawer = new Drawer(this._settings, () => this._indicators,
             indicator => indicator instanceof CodexIndicator ||
-                indicator instanceof ClaudeIndicator);
+                indicator instanceof ClaudeIndicator || indicator instanceof GrokIndicator);
     }
 
     _teardown() {

@@ -34,10 +34,14 @@
       <default>false</default>
       <summary>Show Claude Code allowance remaining</summary>
     </key>
+    <key name="grok-enabled" type="b">
+      <default>false</default>
+      <summary>Show Grok Bot weekly allowance remaining</summary>
+    </key>
     <key name="usage-show-resets" type="b">
       <default>false</default>
       <summary>Show quota reset times in the panel</summary>
-      <description>Append the 5-hour reset time and the weekly reset day and time to the Codex and Claude Code panel labels.</description>
+      <description>Append available reset times to the Codex, Claude Code and Grok Bot panel labels.</description>
     </key>
 
     <!-- Currency converter -->

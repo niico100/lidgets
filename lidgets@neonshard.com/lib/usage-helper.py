@@ -2,6 +2,7 @@
 """Read subscription quotas without exposing credentials to GNOME Shell."""
 
 import argparse
+import base64
 import json
 import math
 import os
@@ -14,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from urllib.parse import quote
 
 
 def cache_path():
@@ -68,6 +70,53 @@ def cache_claude_snapshot(data):
         except (OSError, ValueError):
             pass
     atomic_json(path, snapshot)
+
+
+def grok_snapshot():
+    # Grok Bot desktop 1.2.3 persists this quota slice as JSON in a base32
+    # filename. Read only the active account's personal cache, never secrets
+    # or other accounts. Its internal format may change in future releases.
+    directory = Path(os.environ.get('XDG_CONFIG_HOME', Path.home() / '.config')) / 'Grok Bot' / 'sand-client-persistence'
+
+    def read_slice(key):
+        name = base64.b32encode(key.encode()).decode().lower().rstrip('=') + '.blob'
+        path = directory / name
+        if path.stat().st_size > 65536:
+            raise ValueError('usage cache too large')
+        return json.loads(path.read_text())
+
+    try:
+        account = read_slice('sand.client.slice.client-meta.account-slot')
+        slot = account.get('value')
+        if account.get('schemaVersion') != 1 or not isinstance(slot, str) or not slot:
+            return {'error': 'grok-setup'}
+        escaped = quote(slot, safe="~!*'()-_").replace('.', '%2E')
+        cached = read_slice(f'sand.client.slice.account.{escaped}.weekly-usage.cache')
+    except FileNotFoundError:
+        return {'error': 'grok-setup'}
+    if cached.get('schemaVersion') != 3:
+        return {'error': 'unavailable'}
+    value = cached.get('value') or {}
+    # Team and trial allowances aren't a personal weekly subscription quota.
+    if value.get('selectedTeamId') is not None:
+        return {'error': 'grok-unsupported'}
+    if value.get('kind') == 'absent':
+        return {'windows': [], 'updatedAt': time.time()}
+    reading = value.get('reading') or {}
+    data = reading.get('usage') or {}
+    if value.get('kind') != 'present' or data.get('isTeamSeat') or data.get('isSandTrial'):
+        return {'error': 'grok-unsupported'}
+    updated = reading.get('readAtMs')
+    if (isinstance(updated, bool) or not isinstance(updated, (int, float))
+            or not math.isfinite(updated) or updated <= 0 or updated > time.time() * 1000 + 60000):
+        return {'error': 'unavailable'}
+    reset = data.get('nextResetMs')
+    reset = reset / 1000 if isinstance(reset, (int, float)) and not isinstance(reset, bool) else None
+    parsed = window(data.get('percentUsed'), reset, 10080)
+    if not parsed:
+        return {'error': 'unavailable'}
+    return {'windows': [parsed] if data.get('hasNonZeroIncludedLimit') is True else [],
+            'updatedAt': updated / 1000}
 
 
 def codex_snapshot():
@@ -169,7 +218,7 @@ def configure_claude(remove=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('action', choices=['codex', 'claude', 'claude-statusline', 'install-claude', 'remove-claude'])
+    parser.add_argument('action', choices=['codex', 'claude', 'grok', 'claude-statusline', 'install-claude', 'remove-claude'])
     parser.add_argument('--original', default='')
     args = parser.parse_args()
     if args.action == 'claude-statusline':
@@ -185,6 +234,8 @@ def main():
         if args.action in ('install-claude', 'remove-claude'):
             configure_claude(args.action == 'remove-claude')
             result = {'ok': True}
+        elif args.action == 'grok':
+            result = grok_snapshot()
         elif args.action == 'claude':
             result = json.loads(cache_path().read_text()) if cache_path().exists() else {'error': 'claude-setup'}
         else:
