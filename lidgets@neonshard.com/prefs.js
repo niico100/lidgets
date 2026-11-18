@@ -187,7 +187,7 @@ export default class LidgetsPreferences extends ExtensionPreferences {
             ['metrics-enabled', _('System metrics'), _('CPU, GPU, memory, disk and more')],
             ['codex-enabled', _('Codex limits'), _('Subscription allowance remaining; requires Codex CLI login')],
             ['claude-enabled', _('Claude Code limits'), _('5-hour and weekly allowance remaining; connect below')],
-            ['grok-enabled', _('Grok Bot limits'), _('Weekly allowance remaining from the Grok Bot desktop cache')],
+            ['grok-enabled', _('Grok limits'), _('Weekly allowance remaining from the Grok desktop cache')],
             ['usage-show-resets', _('Show limit reset times'),
                 _('Add available reset times to the AI usage labels')],
             ['remote-enabled', _('Remote desktop banner'),

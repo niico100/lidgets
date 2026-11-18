@@ -10,7 +10,7 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 const UsageIndicator = GObject.registerClass(
 class UsageIndicator extends PanelMenu.Button {
     _init(settings, path, provider) {
-        const title = {codex: 'Codex', claude: 'Claude', grok: 'Grok Bot'}[provider];
+        const title = {codex: 'Codex', claude: 'Claude', grok: 'Grok'}[provider];
         super._init(0.0, title, false);
         this._provider = provider;
         this._settings = settings;
@@ -144,11 +144,11 @@ class UsageIndicator extends PanelMenu.Button {
         else if (this._error === 'claude-setup')
             message = _('Connect Claude Code in Lidgets preferences, then use Claude Code');
         else if (this._error === 'grok-setup')
-            message = _('Sign in to Grok Bot and open Settings > Usage & Billing');
+            message = _('Sign in to Grok and open Settings > Usage & Billing');
         else if (this._error === 'grok-unsupported')
-            message = _('Grok Bot team and trial allowances are not supported');
+            message = _('Grok team and trial allowances are not supported');
         else if (this._error && this._provider === 'grok')
-            message = _('Grok Bot usage unavailable; its cache format may have changed');
+            message = _('Grok usage unavailable; its cache format may have changed');
         else if (this._error)
             message = _('Usage unavailable — check your CLI login');
         else if (!windows.length)
@@ -162,7 +162,7 @@ class UsageIndicator extends PanelMenu.Button {
                 _('Updates when Claude Code is used'), {reactive: false}));
         if (this._provider === 'grok')
             this.menu.addMenuItem(new PopupMenu.PopupMenuItem(
-                _('Weekly allowance; updates from the Grok Bot desktop cache'), {reactive: false}));
+                _('Weekly allowance; updates from the Grok desktop cache'), {reactive: false}));
         this.menu.addAction(_('Refresh'), () => this._refresh());
     }
 });

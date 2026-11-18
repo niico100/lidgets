@@ -556,25 +556,25 @@ msgid "Refresh"
 msgstr ""
 
 #: prefs.js:190
-msgid "Grok Bot limits"
+msgid "Grok limits"
 msgstr ""
 
 #: prefs.js:190
-msgid "Weekly allowance remaining from the Grok Bot desktop cache"
+msgid "Weekly allowance remaining from the Grok desktop cache"
 msgstr ""
 
 #: lib/usage.js:149
-msgid "Sign in to Grok Bot and open Settings > Usage & Billing"
+msgid "Sign in to Grok and open Settings > Usage & Billing"
 msgstr ""
 
 #: lib/usage.js:151
-msgid "Grok Bot team and trial allowances are not supported"
+msgid "Grok team and trial allowances are not supported"
 msgstr ""
 
 #: lib/usage.js:165
-msgid "Weekly allowance; updates from the Grok Bot desktop cache"
+msgid "Weekly allowance; updates from the Grok desktop cache"
 msgstr ""
 
 #: lib/usage.js:153
-msgid "Grok Bot usage unavailable; its cache format may have changed"
+msgid "Grok usage unavailable; its cache format may have changed"
 msgstr ""

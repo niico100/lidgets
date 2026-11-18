@@ -36,12 +36,12 @@
     </key>
     <key name="grok-enabled" type="b">
       <default>false</default>
-      <summary>Show Grok Bot weekly allowance remaining</summary>
+      <summary>Show Grok weekly allowance remaining</summary>
     </key>
     <key name="usage-show-resets" type="b">
       <default>false</default>
       <summary>Show quota reset times in the panel</summary>
-      <description>Append available reset times to the Codex, Claude Code and Grok Bot panel labels.</description>
+      <description>Append available reset times to the Codex, Claude Code and Grok panel labels.</description>
     </key>
 
     <!-- Currency converter -->
