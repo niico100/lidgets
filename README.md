@@ -100,7 +100,7 @@ weekly window on Monday at 09:00.
   follow the account's reported durations; missing windows are not invented.
 - **Grok:** reads the active account's personal weekly allowance from the
   Grok desktop cache. Sign in and open **Settings > Usage & Billing** to
-  populate it. The label uses the same 5-hour/weekly format, for example `Grok (—/41)`;
+  populate it. The label shows the weekly allowance, for example `Grok (41)`;
   Grok's cache does not report a five-hour allowance. Team and trial quotas
   are not supported. This uses the internal schema-version-3 cache format of the
   installed desktop app, which may change. No credentials are read or sent.

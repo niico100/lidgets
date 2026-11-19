@@ -117,9 +117,13 @@ class UsageIndicator extends PanelMenu.Button {
             return formatReset(w, style);
         };
         const [fiveHour, weekly] = [300, 10080].map(minutes => windows.find(w => w.minutes === minutes));
-        const values = [fiveHour, weekly].map(w => w ? remaining(w).replace('%', '') : '—');
+        const shown = this._provider === 'grok' ? [weekly] : [fiveHour, weekly];
+        const values = shown.map(w => w ? remaining(w).replace('%', '') : '—');
+        const resetValues = this._provider === 'grok'
+            ? [resetText(weekly, 'day')]
+            : [resetText(fiveHour, 'time'), resetText(weekly, 'day')];
         const resets = this._settings.get_boolean('usage-show-resets')
-            ? ` · ${resetText(fiveHour, 'time')}/${resetText(weekly, 'day')}` : '';
+            ? ` · ${resetValues.join('/')}` : '';
         const label = `${this._title} (${values.join('/')}${resets})`;
         this._label.text = `${label}${stale ? ' *' : ''}`;
         this.menu.removeAll();
