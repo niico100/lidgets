@@ -339,6 +339,14 @@ The shell's own source is readable for checking APIs:
 gresource extract /usr/lib64/gnome-shell/libshell-18.so /org/gnome/shell/ui/panel.js
 ```
 
+Run nested GNOME previews through `bash tools/run-isolated-session.sh COMMAND
+[ARGUMENT...]`, with separate XDG config, data and cache directories. For example,
+`bash tools/run-isolated-session.sh bash /tmp/lidgets-grok-preview.sh`.
+The runner gives the preview its own runtime directory and D-Bus session while
+preserving the parent Wayland connection. Plain `dbus-run-session` with the
+desktop's runtime directory can let the preview's document portal unmount the
+desktop portal and break Flatpak application startup.
+
 Prefs can be tested without a restart by stubbing `ExtensionPreferences` and
 running the file under plain `gjs -m` against a real `Adw.PreferencesWindow`.
 
